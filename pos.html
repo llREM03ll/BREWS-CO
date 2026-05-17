@@ -705,6 +705,7 @@
 </div>
 
 <script src="js/settings.js"></script>
+<script src="js/roles.js"></script>
 <script>
 // Safety fallback — if settings.js failed to load, define a no-op
 if (typeof getSettings !== "function") {
@@ -1561,6 +1562,14 @@ function confirmEndShift() {
   saveOrderLog();
   clearPOSState();
   if(clockInterval) clearInterval(clockInterval);
+
+  // If employee device — auto-push history to cloud silently
+  if (typeof getRole === "function" && getRole() === "employee") {
+    if (typeof syncPushHistory === "function") {
+      syncPushHistory().catch(e => console.warn("Auto-push history failed:", e));
+    }
+  }
+
   window.location.href="calculate.html";
 }
 
@@ -1590,6 +1599,27 @@ const hasShift = !!localStorage.getItem(SHIFT_ACTIVE_KEY) ||
                  state.orders.length > 0 || state.currentItems.length > 0 ||
                  state.begM || state.begL || state.begS || state.begHC;
 if (hasShift) showPOS(); else showSetup();
+
+// ── Role enforcement ─────────────────────────────────────────────────────
+// Employees: OOS toggles allowed (via ⚙ Flavors button, which shows OOS).
+// The flavor settings modal already contains OOS toggles — keep it accessible.
+// But if not paired at all, redirect to index to pair first.
+(function enforceRole() {
+  if (typeof getRole !== "function") return; // roles.js not loaded, skip
+  const role = getRole();
+  if (!role) {
+    // Not paired — send to index to set up role
+    if (!localStorage.getItem("brewsShiftActive")) {
+      window.location.replace("index.html");
+    }
+    return;
+  }
+  // For employees, rename the Flavors button to make it clear it's OOS-only
+  if (role === "employee") {
+    const flvBtn = document.querySelector(".flavor-settings-btn");
+    if (flvBtn) { flvBtn.textContent = "⚙ OOS"; flvBtn.title = "Toggle out-of-stock flavors"; }
+  }
+})();
 </script>
 </body>
 </html>
