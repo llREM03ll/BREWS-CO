@@ -70,6 +70,28 @@ async function syncPush() {
   return ts;
 }
 
+/**
+ * syncPushHistory — employee-safe push.
+ * Only pushes inventoryHistory and brewsLastEndingCups.
+ * Does NOT overwrite prices, settings, or other admin data in the cloud.
+ * Merges with existing cloud doc using Firestore's { merge: true }.
+ */
+async function syncPushHistory() {
+  const db = _initDB();
+  if (!db) throw new Error("Firebase unavailable — check your connection.");
+  const data = {};
+  ["inventoryHistory", "brewsLastEndingCups", "brewsOrderLog"].forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v != null) data[k] = v;
+  });
+  data._lastEmployeePush = new Date().toISOString();
+  // merge: true — only updates these fields, leaves everything else intact
+  await db.doc(SHOP_DOC).set(data, { merge: true });
+  const ts = new Date().toISOString();
+  localStorage.setItem(SYNC_TS, ts);
+  return ts;
+}
+
 async function syncPull() {
   const db = _initDB();
   if (!db) throw new Error("Firebase unavailable — check your connection.");
