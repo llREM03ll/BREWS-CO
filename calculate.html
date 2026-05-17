@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="theme-color" content="#6b4f36" />
+  <title>BREWS.CO – Calculate</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .damage-note {
+      font-size: 0.68rem; color: #b08060; font-weight: 500;
+      margin-left: 6px; font-style: italic; text-transform: none; letter-spacing: 0;
+    }
+    .del-dmg-header {
+      display: grid; grid-template-columns: 96px 1fr 1fr;
+      gap: 8px; margin-bottom: 4px;
+    }
+    .del-dmg-header span {
+      font-size: 0.68rem; font-weight: 700; color: #b08060;
+      letter-spacing: 0.07em; text-transform: uppercase; text-align: center;
+    }
+    .del-dmg-header span:first-child { text-align: left; }
+    .carryover-btn {
+      display: flex; align-items: center; gap: 7px; width: 100%;
+      background: #f0f7f0; border: 1.5px solid #b8ddb8; border-radius: 11px;
+      padding: 11px 14px; font-size: 0.84rem; font-weight: 700; color: #3a7a3a;
+      font-family: inherit; cursor: pointer; margin-bottom: 10px; transition: all .18s;
+    }
+    .carryover-btn:hover { background: #e0f0e0; border-color: #8aba8a; transform: translateY(-1px); }
+    .carryover-meta { font-size: 0.7rem; color: #7ab87a; font-weight: 500; margin-left: auto; }
+    @media (max-width: 600px) {
+      .del-dmg-header { display: none; }
+    }
+  </style>
+</head>
+<body class="has-bottom-nav">
+  <div class="container">
+    <a href="index.html" style="text-decoration:none;">
+      <div class="brand">BREWS.CO</div>
+      <div class="brand-sub">Calculate</div>
+    </a>
+
+    <div id="carryoverWrap" style="display:none;">
+      <button class="carryover-btn" onclick="useYesterdaysEnding()">
+        📋 Use Yesterday's Ending Cups
+        <span class="carryover-meta" id="carryoverMeta"></span>
+      </button>
+    </div>
+
+    <div class="section">
+      <h3>Input Cups</h3>
+      <!-- M and L have 3 real inputs: begin, end, tally -->
+      <div class="row"><label>Medium</label><input type="number" id="beginM" placeholder="Begin"><input type="number" id="endM" placeholder="End"><input type="number" id="tallyMC" placeholder="MC Tally"></div>
+      <div class="row"><label>Large</label><input type="number" id="beginL" placeholder="Begin"><input type="number" id="endL" placeholder="End"><input type="number" id="tallyLC" placeholder="LC Tally"></div>
+      <!-- S and HC only have begin + end -->
+      <div class="row-2"><label>Small</label><input type="number" id="beginS" placeholder="Begin"><input type="number" id="endS" placeholder="End"></div>
+      <div class="row-2"><label>Hot Coffee</label><input type="number" id="beginHC" placeholder="Begin"><input type="number" id="endHC" placeholder="End"></div>
+    </div>
+
+    <div class="section">
+      <h3>Delivered &amp; Damage <span class="damage-note">optional — shown in receipt only</span></h3>
+      <div class="del-dmg-header">
+        <span>Cup</span><span>Delivered</span><span>Damage</span>
+      </div>
+      <div class="row-2"><label>Medium</label><input type="number" id="deliveredM" placeholder="0"><input type="number" id="damageM" placeholder="0"></div>
+      <div class="row-2"><label>Large</label><input type="number" id="deliveredL" placeholder="0"><input type="number" id="damageL" placeholder="0"></div>
+      <div class="row-2"><label>Small</label><input type="number" id="deliveredS" placeholder="0"><input type="number" id="damageS" placeholder="0"></div>
+      <div class="row-2"><label>Hot Coffee</label><input type="number" id="deliveredHC" placeholder="0"><input type="number" id="damageHC" placeholder="0"></div>
+    </div>
+
+    <div class="section">
+      <h3>Expenses &amp; Addons</h3>
+      <div id="expensesContainer">
+        <div class="expense-row">
+          <input type="text" class="exp-name" placeholder="Item name">
+          <input type="number" class="exp-price" placeholder="₱0">
+          <button type="button" onclick="this.parentElement.remove(); saveInputs();">✕</button>
+        </div>
+      </div>
+      <button type="button" class="add-expense-btn" onclick="addExpenseRow()">+ Add Expense</button>
+      <!-- Addons: single input, no dummy blanks -->
+      <div class="row-addon" style="margin-top:12px;">
+        <label>Addons</label>
+        <input type="number" id="addons" placeholder="₱0">
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Needs <span class="damage-note">auto-detected + manual — optionally printed on receipt</span></h3>
+
+      <!-- Auto-detected preview — populated after compute or on load -->
+      <div id="needsAutoPreview" style="margin-bottom:12px;"></div>
+
+      <!-- Free-text other needs -->
+      <div>
+        <div style="font-size:0.7rem;font-weight:700;color:#9a7a5e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px;">Other Needs</div>
+        <div id="needsContainer"></div>
+        <button type="button" class="add-expense-btn" onclick="addNeedRow()">+ Add Item</button>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button onclick="calculate()">Compute</button>
+      <button onclick="clearAll()" class="secondary">Clear All</button>
+    </div>
+
+    <div class="section">
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="calculate.html" class="bottom-nav-item active">
+      <span class="bottom-nav-icon">🧮</span>
+      <span class="bottom-nav-label">Calculate</span>
+    </a>
+    <a href="pos.html" class="bottom-nav-item bottom-nav-shift" id="shiftNavBtn">
+      <span class="bottom-nav-shift-pill">🧋</span>
+      <span class="bottom-nav-label" id="shiftNavLabel">Shift</span>
+    </a>
+    <a href="calendar.html" class="bottom-nav-item">
+      <span class="bottom-nav-icon">📅</span>
+      <span class="bottom-nav-label">History</span>
+    </a>
+  </nav>
+
+  <script>
+    // Clamp all number inputs to 0+
+    document.addEventListener("input", e => {
+      if (e.target.type === "number") {
+        const v = parseFloat(e.target.value);
+        if (!isNaN(v) && v < 0) e.target.value = 0;
+      }
+    });
+
+    // On reload → go to index (unless a shift is active)
+    const _nav = performance.getEntriesByType('navigation')[0];
+    if (_nav && _nav.type === 'reload' && !localStorage.getItem('brewsShiftActive')) {
+      window.location.replace('index.html');
+    }
+    if (localStorage.getItem("brewsShiftActive")) {
+      document.getElementById("shiftNavLabel").textContent = "↩ Shift";
+    }
+
+    // Carry-over button
+    (function initCarryover() {
+      const raw = localStorage.getItem("brewsLastEndingCups");
+      if (!raw) return;
+      try {
+        const d = JSON.parse(raw);
+        const wrap = document.getElementById("carryoverWrap");
+        const meta = document.getElementById("carryoverMeta");
+        wrap.style.display = "block";
+        meta.textContent = d.date ? `from ${d.date}` : "";
+        window.useYesterdaysEnding = function() {
+          const fields = { beginM: d.endM, beginL: d.endL, beginS: d.endS, beginHC: d.endHC };
+          Object.entries(fields).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.value = val;
+            el.style.transition = "background .4s";
+            el.style.background = "#e6f5e6";
+            setTimeout(() => el.style.background = "", 900);
+          });
+          if (typeof saveInputs === "function") saveInputs();
+        };
+      } catch {}
+    })();
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="js/settings.js"></script>
+  <script>
+    if (typeof getSettings !== "function") {
+      const _D = {
+        prices:{ M:29,L:39,S:25,MC:35,LC:45,HC:45,FTM:29,FTL:39 },
+        addonPrices:{"Pearl":6,"Nata":6,"Coffee Jelly":6,"Oreo":6,"Cream Cheese":10,"Espresso Shot":6},
+        salaryBase:350,salaryBonusThreshold:3000,salaryBonusPerK:50,
+        quotaStart:3000,lowStock:5,
+        flavors:{milktea:[],fruittea:[],icedcoffee:[],hotcoffee:[]}
+      };
+      window.getSettings  = () => JSON.parse(JSON.stringify(_D));
+      window.saveSettings = () => {};
+      window.resetSettings= () => {};
+    }
+  </script>
+  <script src="js/InventorySystem.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
