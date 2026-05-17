@@ -170,10 +170,83 @@
     }
     .sync-btn-pull:hover { background: #e4d0bf; transform: translateY(-1px); }
     .sync-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* ── Role / Pairing Screen ── */
+    .role-screen {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(245,238,230,0.97); backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .role-screen.hidden { display: none; }
+    .role-card {
+      background: #fffaf5; border: 1.5px solid #e8d5c4; border-radius: 24px;
+      padding: 36px 28px 32px; max-width: 400px; width: 100%;
+      box-shadow: 0 8px 40px rgba(122,92,62,0.15); text-align: center;
+    }
+    .role-emoji { font-size: 2.8rem; margin-bottom: 14px; }
+    .role-title { font-size: 1.25rem; font-weight: 800; color: #5c4631; margin-bottom: 6px; }
+    .role-sub   { font-size: 0.86rem; color: #9a7a5e; margin-bottom: 26px; line-height: 1.55; }
+    .role-btns  { display: flex; flex-direction: column; gap: 10px; }
+    .role-btn {
+      width: 100%; padding: 13px; border-radius: 13px; font-size: 0.92rem;
+      font-weight: 700; font-family: inherit; cursor: pointer; border: none; transition: all .18s;
+    }
+    .role-btn-admin {
+      background: linear-gradient(145deg, #d4a97c, #7a5c3e); color: #fff;
+      box-shadow: 0 3px 12px rgba(122,92,62,0.28);
+    }
+    .role-btn-admin:hover { background: linear-gradient(145deg, #7a5c3e, #5c4631); transform: translateY(-1px); }
+    .role-btn-emp { background: #f0e4d8; color: #7a5c3e; border: 1.5px solid #e0c9b8; }
+    .role-btn-emp:hover { background: #e4d0bf; transform: translateY(-1px); }
+    .role-code-wrap { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .role-code-input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid #dfc9b4; border-radius: 12px;
+      font-size: 1rem; font-family: inherit; background: #fdf7f2; color: #3d2b1a;
+      text-align: center; letter-spacing: 0.12em; box-sizing: border-box;
+    }
+    .role-code-input:focus { outline: none; border-color: #c7a27c; box-shadow: 0 0 0 3px rgba(199,162,124,0.18); }
+    .role-error { font-size: 0.8rem; color: #c0665a; font-weight: 600; min-height: 1.2em; }
+    .role-back { background: none; border: none; color: #9a7a5e; font-size: 0.82rem; font-family: inherit; cursor: pointer; margin-top: 4px; text-decoration: underline; }
+  </style>
 </head>
 <body class="has-bottom-nav">
 
-  <button class="settings-fab" onclick="openSettings()">⚙️ Settings</button>
+  <!-- ═══════════ ROLE PAIRING SCREEN (shown until role is set) ═══════════ -->
+  <div class="role-screen" id="roleScreen">
+    <div class="role-card">
+      <div class="role-emoji">☕</div>
+      <div class="role-title" id="roleTitle">Welcome to BREWS.CO</div>
+      <div class="role-sub"  id="roleSub">First, set up this device. Are you the admin (owner) or an employee?</div>
+
+      <!-- Step 1: choose role -->
+      <div class="role-btns" id="roleChoose">
+        <button class="role-btn role-btn-admin" onclick="roleStep('admin')">👑 I'm the Admin</button>
+        <button class="role-btn role-btn-emp"   onclick="roleStep('employee')">👤 I'm an Employee</button>
+      </div>
+
+      <!-- Step 2a: Admin sets their code -->
+      <div class="role-code-wrap" id="roleAdminWrap" style="display:none;">
+        <div style="font-size:0.8rem;color:#7a5c3e;font-weight:700;text-align:left;">Create a pairing code</div>
+        <div style="font-size:0.74rem;color:#9a7a5e;text-align:left;margin-top:-4px;">Employees will use this to bind their device. Make it something only your team knows.</div>
+        <input class="role-code-input" id="adminCodeInput" type="text" placeholder="e.g. BREWS2025" maxlength="32" />
+        <div class="role-error" id="adminCodeError"></div>
+        <button class="role-btn role-btn-admin" onclick="confirmAdmin()">Set as Admin ✓</button>
+        <button class="role-back" onclick="roleStep('back')">← Back</button>
+      </div>
+
+      <!-- Step 2b: Employee enters code -->
+      <div class="role-code-wrap" id="roleEmpWrap" style="display:none;">
+        <div style="font-size:0.8rem;color:#7a5c3e;font-weight:700;text-align:left;">Enter pairing code</div>
+        <div style="font-size:0.74rem;color:#9a7a5e;text-align:left;margin-top:-4px;">Ask your admin for the code. This connects your device to the shop.</div>
+        <input class="role-code-input" id="empCodeInput" type="text" placeholder="Enter code here" maxlength="32" />
+        <div class="role-error" id="empCodeError"></div>
+        <button class="role-btn role-btn-admin" id="empConfirmBtn" onclick="confirmEmployee()">Pair as Employee ✓</button>
+        <button class="role-back" onclick="roleStep('back')">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="settings-fab" id="settingsFab" onclick="openSettings()" style="display:none;">⚙️ Settings</button>
 
   <div class="home-view">
     <a href="index.html" class="home-logo">
@@ -196,17 +269,17 @@
       <a href="pos.html" class="home-resume-btn">Resume →</a>
     </div>
 
-    <!-- Sync card -->
-    <div class="sync-card">
+    <!-- Sync card — role-aware -->
+    <div class="sync-card" id="syncCard">
       <div class="sync-row">
         <div class="sync-status">
           <span class="sync-dot" id="syncDot"></span>
           <span id="syncStatusText">Not synced yet</span>
         </div>
+        <span id="syncRoleLabel" style="font-size:0.68rem;color:#b08060;font-weight:700;letter-spacing:0.06em;"></span>
       </div>
-      <div class="sync-btns">
-        <button class="sync-btn sync-btn-push" id="syncPushBtn" onclick="doSync('push')">☁️ Push to Cloud</button>
-        <button class="sync-btn sync-btn-pull" id="syncPullBtn" onclick="doSync('pull')">⬇️ Pull from Cloud</button>
+      <div class="sync-btns" id="syncBtns">
+        <!-- filled by initRoleUI() -->
       </div>
     </div>
   </div>
@@ -241,36 +314,77 @@
     </a>
   </nav>
   <script src="js/settings.js"></script>
+  <script src="js/roles.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
   <script>
-    // Graceful fallback if sync.js not loaded yet
-    function _syncStub(fn) {
-      return async function() { throw new Error("Sync not available. Make sure sync.js is in your js/ folder."); };
-    }
-    window.syncPush         = _syncStub();
-    window.syncPull         = _syncStub();
-    window.getLastSyncDisplay = () => null;
+    function _syncStub() { return async function() { throw new Error("Sync not available."); }; }
+    window.syncPush = _syncStub(); window.syncPull = _syncStub(); window.getLastSyncDisplay = () => null;
   </script>
-  <script src="js/sync.js" onerror="console.warn('sync.js not found — upload js/sync.js to your repo')"></script>
+  <script src="js/sync.js" onerror="console.warn('sync.js not found')"></script>
   <script>
-    // Sync UI
+    // ── Role Pairing UI ───────────────────────────────────────────────────
+    function roleStep(step) {
+      document.getElementById("roleChoose").style.display    = "none";
+      document.getElementById("roleAdminWrap").style.display = "none";
+      document.getElementById("roleEmpWrap").style.display   = "none";
+      document.getElementById("adminCodeError").textContent  = "";
+      document.getElementById("empCodeError").textContent    = "";
+      if (step === "back") {
+        document.getElementById("roleChoose").style.display = "flex";
+        document.getElementById("roleTitle").textContent = "Welcome to BREWS.CO";
+        document.getElementById("roleSub").textContent   = "First, set up this device. Are you the admin (owner) or an employee?";
+      } else if (step === "admin") {
+        document.getElementById("roleAdminWrap").style.display = "flex";
+        document.getElementById("roleTitle").textContent = "Admin Setup";
+        document.getElementById("roleSub").textContent   = "Create a secret pairing code your employees will use to bind their devices.";
+      } else if (step === "employee") {
+        document.getElementById("roleEmpWrap").style.display = "flex";
+        document.getElementById("roleTitle").textContent = "Employee Setup";
+        document.getElementById("roleSub").textContent   = "Enter the pairing code from your admin to link this device.";
+      }
+    }
+
+    function confirmAdmin() {
+      const code = document.getElementById("adminCodeInput").value.trim();
+      const res  = pairAsAdmin(code);
+      if (!res.ok) { document.getElementById("adminCodeError").textContent = res.error; return; }
+      document.getElementById("roleScreen").classList.add("hidden");
+      initRoleUI();
+      // Push settings so code reaches cloud
+      setTimeout(() => doSync("push").catch(()=>{}), 800);
+    }
+
+    async function confirmEmployee() {
+      const btn  = document.getElementById("empConfirmBtn");
+      const code = document.getElementById("empCodeInput").value.trim();
+      btn.disabled = true; btn.textContent = "Checking…";
+      const res = await pairAsEmployee(code);
+      btn.disabled = false; btn.textContent = "Pair as Employee ✓";
+      if (!res.ok) { document.getElementById("empCodeError").textContent = res.error; return; }
+      document.getElementById("roleScreen").classList.add("hidden");
+      initRoleUI();
+    }
+
+    // ── Sync UI ───────────────────────────────────────────────────────────
     function setSyncUI(state, msg) {
       const dot  = document.getElementById("syncDot");
       const text = document.getElementById("syncStatusText");
-      const push = document.getElementById("syncPushBtn");
-      const pull = document.getElementById("syncPullBtn");
-      dot.className  = "sync-dot " + (state || "");
+      dot.className    = "sync-dot " + (state || "");
       text.textContent = msg;
-      push.disabled = pull.disabled = (state === "busy");
+      // Disable buttons during busy
+      document.querySelectorAll(".sync-btn").forEach(b => b.disabled = (state === "busy"));
     }
 
     function initSyncDisplay() {
       const last = getLastSyncDisplay();
-      setSyncUI(last ? "ok" : "", last ? "Synced " + last : "Not synced yet");
+      setSyncUI(last ? "ok" : "", last ? "Last synced " + last : "Not synced yet");
     }
 
     async function doSync(direction) {
+      if (direction === "push" && isAdmin()) {
+        if (!confirm("⚠️ Push to Cloud?\n\nThis will OVERWRITE cloud data with this device's data.\nOnly do this if this device has the correct data.")) return;
+      }
       setSyncUI("busy", direction === "push" ? "Pushing…" : "Pulling…");
       try {
         if (direction === "push") {
@@ -279,18 +393,56 @@
         } else {
           await syncPull();
           setSyncUI("ok", "Pulled " + getLastSyncDisplay());
-          // Brief message then reload so new data takes effect
-          setTimeout(() => {
-            if (confirm("Data pulled from cloud. Reload to apply changes?")) location.reload();
-          }, 600);
         }
       } catch (e) {
         setSyncUI("error", "⚠ " + (e.message || "Sync failed"));
-        setTimeout(() => initSyncDisplay(), 4000);
+        setTimeout(initSyncDisplay, 4000);
       }
     }
 
-    initSyncDisplay();
+    // ── Role-aware UI init ────────────────────────────────────────────────
+    function initRoleUI() {
+      const role      = getRole();
+      const btnsEl    = document.getElementById("syncBtns");
+      const roleLabel = document.getElementById("syncRoleLabel");
+      const fab       = document.getElementById("settingsFab");
+
+      if (role === "admin") {
+        roleLabel.textContent = "👑 ADMIN";
+        fab.style.display = "";
+        btnsEl.innerHTML = `
+          <button class="sync-btn sync-btn-push" onclick="doSync('push')">☁️ Push to Cloud</button>
+          <button class="sync-btn sync-btn-pull" onclick="doSync('pull')">⬇️ Pull from Cloud</button>`;
+      } else if (role === "employee") {
+        roleLabel.textContent = "👤 EMPLOYEE";
+        fab.style.display = "none"; // employees can't access settings
+        btnsEl.innerHTML = `<div style="font-size:0.76rem;color:#9a7a5e;padding:4px 0;">Auto-syncing from cloud every 3 min.</div>`;
+        // Employee auto-pull
+        setTimeout(() => autoPull(), 1500);
+        setInterval(() => autoPull(), 3 * 60 * 1000);
+      }
+
+      initSyncDisplay();
+    }
+
+    async function autoPull() {
+      if (localStorage.getItem("brewsShiftActive")) return; // don't pull mid-shift
+      setSyncUI("busy", "Auto-syncing…");
+      try {
+        await syncPull();
+        setSyncUI("ok", "Auto-synced " + getLastSyncDisplay());
+      } catch (e) {
+        setSyncUI("error", "⚠ Auto-sync failed");
+        setTimeout(initSyncDisplay, 3000);
+      }
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────
+    if (hasRole()) {
+      document.getElementById("roleScreen").classList.add("hidden");
+      initRoleUI();
+    }
+    // else: role screen stays visible until user pairs
   </script>
   <script>
     if (localStorage.getItem("brewsShiftActive")) {
@@ -340,6 +492,9 @@
       _ws.salaryBonusPerK      = n("sp_bonusPerK");
       _ws.quotaStart           = n("sp_quotaStart");
       _ws.lowStock             = n("sp_lowStock");
+      // Save pairing code if admin changed it
+      const newCode = document.getElementById("sp_pairingCode")?.value?.trim();
+      if (newCode) setAdminPairingCode(newCode);
     }
 
     function addFlavorToCategory(cat) {
@@ -425,6 +580,18 @@
           <div class="smodal-section-title">Flavors</div>
           <div style="font-size:0.76rem;color:#9a7a5e;margin-bottom:12px;">Add or remove flavors per drink category. Press Enter or tap + Add.</div>
           ${flavorHTML}
+        </div>
+        <div class="smodal-section">
+          <div class="smodal-section-title">👑 Admin — Pairing Code</div>
+          <div style="font-size:0.76rem;color:#9a7a5e;margin-bottom:10px;line-height:1.5;">Change the code employees use to bind their device. After saving, push to cloud so the new code takes effect on all devices.</div>
+          <div class="smodal-field">
+            <label class="smodal-label">Pairing Code</label>
+            <input class="smodal-input" id="sp_pairingCode" type="text" value="${getLocalPairingCode() || ""}" placeholder="e.g. BREWS2025" maxlength="32" style="letter-spacing:0.1em;">
+          </div>
+          <div style="font-size:0.72rem;color:#b08060;margin-top:8px;">This is saved locally and synced to cloud when you push. Employees must enter this exact code.</div>
+          <div style="margin-top:10px;">
+            <button class="role-btn role-btn-emp" style="max-width:200px;padding:9px 14px;font-size:0.8rem;" onclick="if(confirm('Reset this device role? You will need to pair again.')){clearRole();location.reload();}">Reset Device Role</button>
+          </div>
         </div>`;
 
       Object.keys(CAT_LABELS).forEach(cat => renderFlavorCat(cat));
