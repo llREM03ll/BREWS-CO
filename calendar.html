@@ -191,7 +191,21 @@
     }
     .log-delete-btn:hover { background: #fae0de; }
 
-    @media (max-width: 600px) {
+    .modal-print-btn {
+      background: #f0e4d8; border: 1.5px solid #e0c9b8; border-radius: 10px;
+      padding: 8px 13px; font-weight: 700; font-size: 0.84rem;
+      color: #7a5c3e; cursor: pointer; font-family: inherit; transition: all .16s;
+    }
+    .modal-print-btn:hover { background: #e4d0bf; }
+    @media print {
+      body > *:not(#printArea) { display: none !important; }
+      #printArea {
+        display: block !important; position: fixed; inset: 0;
+        background: #fff; padding: 24px; font-family: "Inter", sans-serif;
+        font-size: 13px; color: #000;
+      }
+    }
+    #printArea { display: none; }
       .calendar td { height: 50px; padding: 4px; border-radius: 8px; }
       .day-total { font-size: 0.65rem; }
       .day-num   { font-size: 0.65rem; }
@@ -268,6 +282,7 @@
     <div class="modal-header">
       <h3 id="modalDate"></h3>
       <div class="modal-header-actions">
+        <button class="modal-print-btn" onclick="printReceipt()">🖨 Print</button>
         <button class="modal-delete-btn" onclick="deleteCurrentEntry()">🗑 Delete</button>
         <button class="modal-close" onclick="closeModal()">✕ Close</button>
       </div>
@@ -275,6 +290,9 @@
     <div class="modal-body" id="modalBody"></div>
   </div>
 </div>
+
+<!-- Hidden print area -->
+<div id="printArea"></div>
 
 <script src="js/history.js"></script>
 <script>
@@ -478,6 +496,23 @@
     document.getElementById("modalDate").textContent = `Receipt — ${dateStr}`;
     document.getElementById("modalBody").innerHTML   = entry.results;
     document.getElementById("modalOverlay").classList.add("open");
+  }
+
+  function printReceipt() {
+    if (!currentModalDate) return;
+    const body    = document.getElementById("modalBody").innerHTML;
+    const printEl = document.getElementById("printArea");
+    printEl.innerHTML = `
+      <div style="text-align:center;margin-bottom:16px;">
+        <div style="font-size:1.4rem;font-weight:800;letter-spacing:0.1em;color:#7a5c3e;">BREWS.CO</div>
+        <div style="font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:#b08060;">Daily Receipt</div>
+        <div style="font-size:0.8rem;color:#9a7a5e;margin-top:4px;">${currentModalDate}</div>
+      </div>
+      ${body}
+      <div style="text-align:center;margin-top:20px;font-size:0.72rem;color:#b08060;">
+        Printed ${new Date().toLocaleString("en-PH")}
+      </div>`;
+    window.print();
   }
 
   function closeModal() {
