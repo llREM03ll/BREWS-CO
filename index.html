@@ -173,8 +173,8 @@
 
     /* Role pairing overlay */
     .role-overlay {
-      position:fixed;inset:0;z-index:9000;background:rgba(245,238,230,0.97);
-      backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;
+      position:fixed;inset:0;z-index:9000;background:rgba(245,238,230,0.55);
+      backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;
       padding:20px;opacity:0;pointer-events:none;transition:opacity .3s;
     }
     .role-overlay.show{opacity:1;pointer-events:all;}
@@ -421,11 +421,12 @@
       btn.disabled=true; btn.textContent="Checking…";
       document.getElementById("empErr").textContent = "";
       try {
-        if (typeof firebase==="undefined"||!firebase.apps) throw new Error("Firebase not loaded — check internet.");
-        if (!firebase.apps.length) firebase.initializeApp(window._firebaseConfig||{});
-        const snap = await firebase.firestore().doc("shops/brews-co-main").get();
+        // Use _initDB() from sync.js which already has the Firebase config
+        const db = (typeof _initDB === "function") ? _initDB() : null;
+        if (!db) throw new Error("Firebase not ready — check your internet connection.");
+        const snap = await db.doc("shops/brews-co-main").get();
         if (!snap.exists) throw new Error("No shop data in cloud yet. Ask admin to open the app first.");
-        const cloudCode = JSON.parse(snap.data().brewsSettings||"{}") ._pairingCode || null;
+        const cloudCode = JSON.parse(snap.data().brewsSettings||"{}")._pairingCode || null;
         if (!cloudCode) throw new Error("Admin hasn't set a pairing code yet. Ask them to set one in Settings.");
         if (cloudCode.trim().toLowerCase() !== code.toLowerCase()) throw new Error("Wrong code — ask your admin.");
         localStorage.setItem(ROLE_KEY,"employee");
