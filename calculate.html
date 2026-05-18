@@ -171,6 +171,13 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    // Stub so ui.js doesn't crash if sync.js fails to load
+    window.syncPushHistory = async function(){ console.warn("syncPushHistory not loaded"); };
+  </script>
+  <script src="js/sync.js"></script>
   <script src="js/settings.js"></script>
   <script>
     if (typeof getSettings !== "function") {
