@@ -170,115 +170,151 @@
     }
     .sync-btn-pull:hover { background: #e4d0bf; transform: translateY(-1px); }
     .sync-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* Role pairing overlay */
     .role-overlay {
-      position: fixed; inset: 0; z-index: 9000;
-      background: rgba(245,238,230,0.96); backdrop-filter: blur(8px);
-      display: flex; align-items: center; justify-content: center; padding: 20px;
-      opacity: 0; transition: opacity .3s;
+      position:fixed;inset:0;z-index:9000;background:rgba(245,238,230,0.97);
+      backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;
+      padding:20px;opacity:0;pointer-events:none;transition:opacity .3s;
     }
-    .role-overlay.visible { opacity: 1; }
-    .role-card {
-      background: #fffaf5; border: 1.5px solid #e8d5c4; border-radius: 24px;
-      padding: 38px 28px 34px; max-width: 380px; width: 100%;
-      box-shadow: 0 8px 40px rgba(122,92,62,0.16); text-align: center;
-      transform: translateY(12px); transition: transform .3s;
-    }
-    .role-overlay.visible .role-card { transform: translateY(0); }
-    .role-card-emoji { font-size: 3rem; margin-bottom: 14px; line-height: 1; }
-    .role-card-title { font-size: 1.3rem; font-weight: 800; color: #5c4631; margin-bottom: 8px; }
-    .role-card-sub   { font-size: 0.86rem; color: #9a7a5e; line-height: 1.6; margin-bottom: 28px; }
-    .role-choose { display: flex; flex-direction: column; gap: 10px; }
-    .role-btn {
-      width: 100%; padding: 14px; border-radius: 14px; font-size: 0.92rem;
-      font-weight: 700; font-family: inherit; cursor: pointer; border: none; transition: all .18s;
-    }
-    .role-btn-admin { background: linear-gradient(145deg,#d4a97c,#7a5c3e); color:#fff; box-shadow:0 3px 12px rgba(122,92,62,.28); }
-    .role-btn-admin:hover { background:linear-gradient(145deg,#7a5c3e,#5c4631); transform:translateY(-1px); }
-    .role-btn-emp { background:#f0e4d8; color:#7a5c3e; border:1.5px solid #e0c9b8; }
-    .role-btn-emp:hover { background:#e4d0bf; transform:translateY(-1px); }
-    .role-step { display: none; flex-direction: column; gap: 12px; }
-    .role-step.active { display: flex; }
-    .role-step-label { font-size:0.8rem; font-weight:700; color:#7a5c3e; text-align:left; }
-    .role-step-hint  { font-size:0.74rem; color:#9a7a5e; text-align:left; margin-top:-6px; line-height:1.5; }
-    .role-input {
-      width:100%; padding:13px 14px; border:1.5px solid #dfc9b4; border-radius:12px;
-      font-size:1.05rem; font-family:inherit; background:#fdf7f2; color:#3d2b1a;
-      text-align:center; letter-spacing:0.14em; box-sizing:border-box; font-weight:700;
-    }
-    .role-input:focus { outline:none; border-color:#c7a27c; box-shadow:0 0 0 3px rgba(199,162,124,.18); background:#fff; }
-    .role-error { font-size:0.78rem; color:#c0665a; font-weight:600; min-height:1.1em; text-align:center; }
-    .role-back  { background:none; border:none; color:#b08060; font-size:0.8rem; font-family:inherit; cursor:pointer; text-decoration:underline; margin-top:2px; }
-    /* Admin home has no bottom nav shifts */
-    .admin-home .bottom-nav-item.bottom-nav-shift { display: none; }
-    .admin-home .bottom-nav-item:first-child { border-radius: 0 0 0 16px; }
-    .admin-home-card {
-      width:100%; max-width:400px; background: linear-gradient(145deg,#4a3320,#6b4f36);
-      border-radius:20px; padding:22px 20px; color:#fff; margin-bottom:12px;
-      box-shadow:0 4px 20px rgba(50,30,12,.22);
-    }
-    .admin-home-label { font-size:0.62rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,.5); margin-bottom:6px; }
-    .admin-home-val   { font-size:1.6rem; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
-    .admin-home-sub   { font-size:0.74rem; color:rgba(255,255,255,.55); margin-top:3px; }
-    .admin-nav-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:400px; margin-bottom:12px; }
-    .admin-nav-btn {
-      background:#fffaf5; border:1.5px solid #e8d5c4; border-radius:16px; padding:18px 12px;
-      display:flex; flex-direction:column; align-items:center; gap:6px; text-decoration:none;
-      cursor:pointer; font-family:inherit; transition:all .18s; box-shadow:0 1px 4px rgba(122,92,62,.07);
-    }
-    .admin-nav-btn:hover { background:#f5ede5; border-color:#c7a27c; transform:translateY(-2px); box-shadow:0 4px 14px rgba(122,92,62,.13); }
-    .admin-nav-icon  { font-size:1.8rem; line-height:1; }
-    .admin-nav-label { font-size:0.78rem; font-weight:700; color:#5c4631; }
-    .admin-nav-sub   { font-size:0.66rem; color:#9a7a5e; text-align:center; }
+    .role-overlay.show{opacity:1;pointer-events:all;}
+    .role-card{background:#fffaf5;border:1.5px solid #e8d5c4;border-radius:24px;
+      padding:36px 26px 32px;max-width:370px;width:100%;
+      box-shadow:0 8px 40px rgba(122,92,62,.16);text-align:center;}
+    .role-card-icon{font-size:2.8rem;margin-bottom:12px;}
+    .role-card-title{font-size:1.2rem;font-weight:800;color:#5c4631;margin-bottom:7px;}
+    .role-card-sub{font-size:0.85rem;color:#9a7a5e;line-height:1.6;margin-bottom:24px;}
+    .role-btn{width:100%;padding:13px;border-radius:13px;font-size:0.9rem;font-weight:700;
+      font-family:inherit;cursor:pointer;border:none;transition:all .18s;margin-bottom:9px;}
+    .role-btn-primary{background:linear-gradient(145deg,#d4a97c,#7a5c3e);color:#fff;
+      box-shadow:0 3px 12px rgba(122,92,62,.28);}
+    .role-btn-secondary{background:#f0e4d8;color:#7a5c3e;border:1.5px solid #e0c9b8;}
+    .role-step{display:none;flex-direction:column;gap:10px;text-align:left;}
+    .role-step.active{display:flex;}
+    .role-step-label{font-size:0.78rem;font-weight:700;color:#7a5c3e;}
+    .role-step-hint{font-size:0.73rem;color:#9a7a5e;line-height:1.5;margin-top:-4px;}
+    .role-input{width:100%;padding:12px 14px;border:1.5px solid #dfc9b4;border-radius:11px;
+      font-size:1rem;font-family:inherit;background:#fdf7f2;color:#3d2b1a;
+      text-align:center;letter-spacing:0.12em;font-weight:700;box-sizing:border-box;}
+    .role-input:focus{outline:none;border-color:#c7a27c;box-shadow:0 0 0 3px rgba(199,162,124,.18);}
+    .role-error{font-size:0.76rem;color:#c0665a;font-weight:600;min-height:1em;text-align:center;}
+    .role-back{background:none;border:none;color:#b08060;font-size:0.78rem;font-family:inherit;
+      cursor:pointer;text-decoration:underline;text-align:center;}
+    /* Admin dashboard */
+    .admin-dashboard{display:none;flex-direction:column;align-items:center;
+      padding:28px 20px 100px;min-height:100vh;}
+    .admin-today-card{width:100%;max-width:400px;
+      background:linear-gradient(145deg,#4a3320,#6b4f36);
+      border-radius:20px;padding:22px 22px;color:#fff;margin-bottom:12px;
+      box-shadow:0 4px 20px rgba(50,30,12,.22);}
+    .admin-today-lbl{font-size:0.6rem;font-weight:700;letter-spacing:0.14em;
+      text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:5px;}
+    .admin-today-val{font-size:1.7rem;font-weight:800;font-variant-numeric:tabular-nums;}
+    .admin-today-sub{font-size:0.73rem;color:rgba(255,255,255,.55);margin-top:3px;}
+    .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;
+      width:100%;max-width:400px;margin-bottom:12px;}
+    .admin-tile{background:#fffaf5;border:1.5px solid #e8d5c4;border-radius:16px;
+      padding:18px 10px;display:flex;flex-direction:column;align-items:center;
+      gap:5px;text-decoration:none;cursor:pointer;font-family:inherit;
+      transition:all .18s;box-shadow:0 1px 4px rgba(122,92,62,.07);}
+    .admin-tile:hover{background:#f5ede5;border-color:#c7a27c;transform:translateY(-2px);}
+    .admin-tile-icon{font-size:1.7rem;line-height:1;}
+    .admin-tile-label{font-size:0.76rem;font-weight:700;color:#5c4631;}
+    .admin-tile-sub{font-size:0.63rem;color:#9a7a5e;text-align:center;}
   </style>
 </head>
 <body class="has-bottom-nav">
 
-  <!-- ═══ ROLE PAIRING OVERLAY (shown only until role is set) ═══ -->
+  <!-- ══ ROLE PAIRING OVERLAY ══ -->
   <div class="role-overlay" id="roleOverlay">
     <div class="role-card">
-      <div class="role-card-emoji">☕</div>
+      <div class="role-card-icon">☕</div>
       <div class="role-card-title" id="roleTitle">Welcome to BREWS.CO</div>
-      <div class="role-card-sub"   id="roleSub">Is this device for the admin (owner) or an employee?</div>
-
-      <div class="role-choose" id="roleChoose">
-        <button class="role-btn role-btn-admin" onclick="showRoleStep('admin')">👑 Admin / Owner</button>
-        <button class="role-btn role-btn-emp"   onclick="showRoleStep('employee')">👤 Employee</button>
+      <div class="role-card-sub" id="roleSub">Is this device for the admin (owner) or an employee?</div>
+      <div id="roleChoose">
+        <button class="role-btn role-btn-primary" onclick="showStep('admin')">👑 Admin / Owner</button>
+        <button class="role-btn role-btn-secondary" onclick="showStep('employee')">👤 Employee</button>
       </div>
-
-      <div class="role-step" id="roleStepAdmin">
+      <div class="role-step" id="stepAdmin">
         <div class="role-step-label">Create a pairing code</div>
-        <div class="role-step-hint">Employees will enter this to link their device. Only your team should know it.</div>
-        <input class="role-input" id="adminCodeInput" type="text" placeholder="e.g. BREWS2025" maxlength="32"
-          onkeydown="if(event.key==='Enter') confirmAdmin();" autocomplete="off" />
+        <div class="role-step-hint">Employees enter this to bind their device. Only share with your team.</div>
+        <input class="role-input" id="adminCode" type="text" placeholder="e.g. BREWS2025" maxlength="32"
+          onkeydown="if(event.key==='Enter')confirmAdmin();" autocomplete="off"/>
         <div class="role-error" id="adminErr"></div>
-        <button class="role-btn role-btn-admin" onclick="confirmAdmin()">Set as Admin ✓</button>
-        <button class="role-back" onclick="showRoleStep('choose')">← Back</button>
+        <button class="role-btn role-btn-primary" onclick="confirmAdmin()">Set as Admin ✓</button>
+        <button class="role-back" onclick="showStep('choose')">← Back</button>
       </div>
-
-      <div class="role-step" id="roleStepEmp">
+      <div class="role-step" id="stepEmp">
         <div class="role-step-label">Enter pairing code</div>
-        <div class="role-step-hint">Ask your admin for the code to link this device to the shop.</div>
-        <input class="role-input" id="empCodeInput" type="text" placeholder="Enter code" maxlength="32"
-          onkeydown="if(event.key==='Enter') confirmEmployee();" autocomplete="off" />
+        <div class="role-step-hint">Ask your admin for the code to link this device.</div>
+        <input class="role-input" id="empCode" type="text" placeholder="Enter code" maxlength="32"
+          onkeydown="if(event.key==='Enter')confirmEmployee();" autocomplete="off"/>
         <div class="role-error" id="empErr"></div>
-        <button class="role-btn role-btn-admin" id="empConfirmBtn" onclick="confirmEmployee()">Pair as Employee ✓</button>
-        <button class="role-back" onclick="showRoleStep('choose')">← Back</button>
+        <button class="role-btn role-btn-primary" id="empBtn" onclick="confirmEmployee()">Pair as Employee ✓</button>
+        <button class="role-back" onclick="showStep('choose')">← Back</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══ EMPLOYEE HOME ═══ -->
-  <div class="home-view" id="empHome" style="display:none;">
+  <!-- ══ ADMIN DASHBOARD ══ -->
+  <div class="admin-dashboard" id="adminDash">
+    <a href="index.html" style="text-decoration:none;text-align:center;margin-bottom:24px;">
+      <div class="brand">BREWS.CO</div>
+      <div class="brand-sub">Admin Dashboard</div>
+    </a>
+    <div class="admin-today-card">
+      <div class="admin-today-lbl">Today's Revenue</div>
+      <div class="admin-today-val" id="adminTodayVal">—</div>
+      <div class="admin-today-sub" id="adminTodaySub">No entry yet for today</div>
+    </div>
+    <div class="admin-grid">
+      <a href="calendar.html" class="admin-tile">
+        <span class="admin-tile-icon">📅</span>
+        <span class="admin-tile-label">History</span>
+        <span class="admin-tile-sub">Records & receipts</span>
+      </a>
+      <a href="calculate.html" class="admin-tile">
+        <span class="admin-tile-icon">🧮</span>
+        <span class="admin-tile-label">Calculate</span>
+        <span class="admin-tile-sub">Review & compute</span>
+      </a>
+      <button class="admin-tile" onclick="openSettings()">
+        <span class="admin-tile-icon">⚙️</span>
+        <span class="admin-tile-label">Settings</span>
+        <span class="admin-tile-sub">Prices & salary</span>
+      </button>
+      <button class="admin-tile" onclick="adminPull()">
+        <span class="admin-tile-icon" id="adminSyncIcon">☁️</span>
+        <span class="admin-tile-label">Sync</span>
+        <span class="admin-tile-sub" id="adminSyncSub">Pull latest data</span>
+      </button>
+    </div>
+    <div class="sync-card" style="max-width:400px;width:100%;">
+      <div class="sync-row">
+        <div class="sync-status">
+          <span class="sync-dot" id="syncDot"></span>
+          <span id="syncStatusText">Not synced yet</span>
+        </div>
+        <span style="font-size:0.65rem;color:#b08060;font-weight:700;">👑 ADMIN</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="settings-fab" id="settingsFab" onclick="openSettings()" style="display:none;">⚙️ Settings</button>
+
+  <div class="home-view">
     <a href="index.html" class="home-logo">
       <div class="brand">BREWS.CO</div>
       <div class="brand-sub">Inventory System</div>
     </a>
+
     <div class="home-card">
       <div class="home-emoji" id="homeEmoji"></div>
       <div class="home-msg"   id="homeMsg"></div>
       <div class="home-sub"   id="homeSub"></div>
     </div>
     <div class="home-date" id="homeDate"></div>
+
     <div class="home-resume" id="resumeBanner" style="display:none;">
       <div class="home-resume-info">
         <div class="home-resume-title">↩ Unfinished shift saved</div>
@@ -286,69 +322,30 @@
       </div>
       <a href="pos.html" class="home-resume-btn">Resume →</a>
     </div>
+
+    <!-- Sync card -->
     <div class="sync-card">
       <div class="sync-row">
         <div class="sync-status">
-          <span class="sync-dot" id="syncDot"></span>
-          <span id="syncStatusText">Syncing…</span>
+          <span class="sync-dot" id="syncDotEmp"></span>
+          <span id="syncStatusEmp">Syncing…</span>
         </div>
-        <span style="font-size:0.66rem;color:#b08060;font-weight:700;">👤 EMPLOYEE</span>
+        <span style="font-size:0.65rem;color:#b08060;font-weight:700;" id="syncRoleTag"></span>
+      </div>
+      <div class="sync-btns" id="syncBtnsEmp">
+        <!-- buttons injected by JS based on role -->
       </div>
     </div>
   </div>
 
-  <!-- ═══ ADMIN HOME ═══ -->
-  <div class="home-view" id="adminHome" style="display:none;">
-    <a href="index.html" class="home-logo">
-      <div class="brand">BREWS.CO</div>
-      <div class="brand-sub">Admin Dashboard</div>
-    </a>
-    <div class="admin-home-card" id="adminTodayCard">
-      <div class="admin-home-label">Today's Revenue</div>
-      <div class="admin-home-val" id="adminTodayVal">—</div>
-      <div class="admin-home-sub" id="adminTodaySub">No entry yet for today</div>
-    </div>
-    <div class="admin-nav-grid">
-      <a href="calendar.html" class="admin-nav-btn">
-        <span class="admin-nav-icon">📅</span>
-        <span class="admin-nav-label">History</span>
-        <span class="admin-nav-sub">Daily records & receipts</span>
-      </a>
-      <a href="calculate.html" class="admin-nav-btn">
-        <span class="admin-nav-icon">🧮</span>
-        <span class="admin-nav-label">Calculate</span>
-        <span class="admin-nav-sub">Review & compute</span>
-      </a>
-      <button class="admin-nav-btn" onclick="openSettings()">
-        <span class="admin-nav-icon">⚙️</span>
-        <span class="admin-nav-label">Settings</span>
-        <span class="admin-nav-sub">Prices, salary & more</span>
-      </button>
-      <button class="admin-nav-btn" onclick="doAdminSync()">
-        <span class="admin-nav-icon" id="adminSyncIcon">☁️</span>
-        <span class="admin-nav-label">Sync</span>
-        <span class="admin-nav-sub" id="adminSyncSub">Pull employee data</span>
-      </button>
-    </div>
-    <div class="sync-card" style="max-width:400px;">
-      <div class="sync-row">
-        <div class="sync-status">
-          <span class="sync-dot" id="syncDot"></span>
-          <span id="syncStatusText">Not synced yet</span>
-        </div>
-        <span style="font-size:0.66rem;color:#b08060;font-weight:700;">👑 ADMIN</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ SETTINGS MODAL ═══ -->
+  <!-- ═══════════ SETTINGS MODAL ═══════════ -->
   <div class="smodal-overlay" id="settingsModal" onclick="handleSettingsOverlay(event)">
     <div class="smodal">
       <div class="smodal-handle"></div>
       <div class="smodal-head">
         <span class="smodal-title">⚙️ Settings</span>
         <div class="smodal-actions">
-          <button class="smodal-reset" onclick="confirmResetSettings()">↺ Reset</button>
+          <button class="smodal-reset" onclick="confirmResetSettings()">↺ Reset Defaults</button>
           <button class="smodal-done"  onclick="saveAndCloseSettings()">Save ✓</button>
         </div>
       </div>
@@ -356,8 +353,7 @@
     </div>
   </div>
 
-  <!-- Employee bottom nav -->
-  <nav class="bottom-nav" id="empNav" style="display:none;">
+  <nav class="bottom-nav">
     <a href="calculate.html" class="bottom-nav-item">
       <span class="bottom-nav-icon">🧮</span>
       <span class="bottom-nav-label">Calculate</span>
@@ -371,247 +367,203 @@
       <span class="bottom-nav-label">History</span>
     </a>
   </nav>
-
   <script src="js/settings.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="console.warn('Firebase unavailable')"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="console.warn('Firebase unavailable')"></script>
   <script>
-    function _stub() { return async function(){ throw new Error("Sync not available."); }; }
-    window.syncPush = _stub(); window.syncPull = _stub(); window.syncPushHistory = _stub();
-    window.getLastSyncDisplay = () => null;
+    function _stub(){ return async function(){ throw new Error("Sync not available."); }; }
+    window.syncPush = _stub(); window.syncPull = _stub();
+    window.syncPushHistory = _stub(); window.getLastSyncDisplay = () => null;
   </script>
-  <script src="js/sync.js"></script>
+  <script src="js/sync.js" onerror="console.warn('sync.js missing')"></script>
 
   <script>
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════
     //  ROLE SYSTEM
-    // ══════════════════════════════════════════════════════════════
-    const ROLE_KEY    = "brewsDeviceRole";
-    const PAIRING_KEY = "brewsPairingCode";
+    // ══════════════════════════════════════
+    const ROLE_KEY = "brewsDeviceRole", CODE_KEY = "brewsPairingCode";
+    const getRole = () => localStorage.getItem(ROLE_KEY);
 
-    function getRole()    { return localStorage.getItem(ROLE_KEY); }
-    function isAdmin()    { return getRole() === "admin"; }
-    function isEmployee() { return getRole() === "employee"; }
-
-    function showRoleStep(step) {
-      document.getElementById("roleChoose").style.display    = step === "choose" ? "flex"  : "none";
-      document.getElementById("roleStepAdmin").classList.toggle("active", step === "admin");
-      document.getElementById("roleStepEmp").classList.toggle("active",   step === "employee");
+    function showStep(step) {
+      document.getElementById("roleChoose").style.display = step==="choose" ? "block" : "none";
+      document.getElementById("stepAdmin").classList.toggle("active", step==="admin");
+      document.getElementById("stepEmp").classList.toggle("active",   step==="employee");
       document.getElementById("adminErr").textContent = "";
       document.getElementById("empErr").textContent   = "";
-      if (step === "admin") {
-        document.getElementById("roleTitle").textContent = "Admin Setup";
-        document.getElementById("roleSub").textContent   = "Create a secret code your employees will use to bind their device.";
-      } else if (step === "employee") {
-        document.getElementById("roleTitle").textContent = "Employee Setup";
-        document.getElementById("roleSub").textContent   = "Enter the pairing code from your admin.";
-      } else {
-        document.getElementById("roleTitle").textContent = "Welcome to BREWS.CO";
-        document.getElementById("roleSub").textContent   = "Is this device for the admin (owner) or an employee?";
-      }
+      const titles = {
+        choose:   ["Welcome to BREWS.CO",     "Is this device for the admin (owner) or an employee?"],
+        admin:    ["Admin Setup",              "Create a secret code your employees will use to link their device."],
+        employee: ["Employee Setup",           "Enter the pairing code from your admin."],
+      };
+      const [t,s] = titles[step] || titles.choose;
+      document.getElementById("roleTitle").textContent = t;
+      document.getElementById("roleSub").textContent   = s;
     }
 
     function confirmAdmin() {
-      const code = document.getElementById("adminCodeInput").value.trim();
+      const code = document.getElementById("adminCode").value.trim();
       if (!code) { document.getElementById("adminErr").textContent = "Please enter a code."; return; }
-      // Save role + code locally
       localStorage.setItem(ROLE_KEY, "admin");
-      localStorage.setItem(PAIRING_KEY, code);
-      // Embed in settings so it travels to Firestore
-      try {
-        const s = JSON.parse(localStorage.getItem("brewsSettings") || "{}");
-        s._pairingCode = code;
-        localStorage.setItem("brewsSettings", JSON.stringify(s));
-      } catch {}
-      // Push to cloud so employees can verify
-      setSyncUI("busy", "Saving pairing code to cloud…");
-      syncPush().then(() => {
-        setSyncUI("ok", "Pushed " + getLastSyncDisplay());
-      }).catch(e => {
-        setSyncUI("error", "⚠ Push failed — " + (e.message || "check connection"));
-      });
-      hideRoleOverlay();
-      bootHome();
+      localStorage.setItem(CODE_KEY, code);
+      // Embed in settings so it syncs to Firestore
+      try { const s=JSON.parse(localStorage.getItem("brewsSettings")||"{}"); s._pairingCode=code; localStorage.setItem("brewsSettings",JSON.stringify(s)); } catch{}
+      hideOverlay();
+      showAdmin();
+      // Push immediately so code reaches cloud
+      setSyncUI("busy","Saving to cloud…");
+      syncPush().then(()=>setSyncUI("ok","Pushed "+getLastSyncDisplay())).catch(e=>setSyncUI("error","⚠ "+e.message));
     }
 
     async function confirmEmployee() {
-      const code = document.getElementById("empCodeInput").value.trim();
+      const code = document.getElementById("empCode").value.trim();
       if (!code) { document.getElementById("empErr").textContent = "Please enter the code."; return; }
-      const btn = document.getElementById("empConfirmBtn");
-      btn.disabled = true; btn.textContent = "Checking…";
+      const btn = document.getElementById("empBtn");
+      btn.disabled=true; btn.textContent="Checking…";
       document.getElementById("empErr").textContent = "";
       try {
-        // Fetch code from Firestore
-        if (!firebase.apps.length) throw new Error("Firebase not loaded. Check your connection.");
-        const db   = firebase.firestore();
-        const snap = await db.doc("shops/brews-co-main").get();
-        if (!snap.exists) throw new Error("No shop data in cloud. Ask admin to push first.");
-        const data    = snap.data();
-        const cloudSettings = JSON.parse(data.brewsSettings || "{}");
-        const cloudCode = cloudSettings._pairingCode || null;
-        if (!cloudCode) throw new Error("Admin hasn't set a pairing code yet. Ask them to set one in Settings and push.");
-        if (cloudCode.trim().toLowerCase() !== code.toLowerCase())
-          throw new Error("Wrong code. Ask your admin for the correct code.");
-        // Pair success — also pull all settings
-        localStorage.setItem(ROLE_KEY, "employee");
-        Object.entries(data).forEach(([k, v]) => {
-          if (k !== "_pushedAt" && k !== "_pairingCode" && v != null) {
-            try { localStorage.setItem(k, v); } catch {}
-          }
-        });
-        hideRoleOverlay();
-        bootHome();
+        if (typeof firebase==="undefined"||!firebase.apps) throw new Error("Firebase not loaded — check internet.");
+        if (!firebase.apps.length) firebase.initializeApp(window._firebaseConfig||{});
+        const snap = await firebase.firestore().doc("shops/brews-co-main").get();
+        if (!snap.exists) throw new Error("No shop data in cloud yet. Ask admin to open the app first.");
+        const cloudCode = JSON.parse(snap.data().brewsSettings||"{}") ._pairingCode || null;
+        if (!cloudCode) throw new Error("Admin hasn't set a pairing code yet. Ask them to set one in Settings.");
+        if (cloudCode.trim().toLowerCase() !== code.toLowerCase()) throw new Error("Wrong code — ask your admin.");
+        localStorage.setItem(ROLE_KEY,"employee");
+        // Pull all cloud data so employee has correct prices/flavors
+        Object.entries(snap.data()).forEach(([k,v])=>{ if(k!=="brewsDeviceRole"&&v!=null) try{localStorage.setItem(k,v);}catch{}});
+        hideOverlay();
+        showEmployee();
+        autoPull();
       } catch(e) {
-        document.getElementById("empErr").textContent = e.message || "Connection error.";
+        document.getElementById("empErr").textContent = e.message||"Connection error.";
       }
-      btn.disabled = false; btn.textContent = "Pair as Employee ✓";
+      btn.disabled=false; btn.textContent="Pair as Employee ✓";
     }
 
-    function hideRoleOverlay() {
-      document.getElementById("roleOverlay").style.opacity = "0";
-      document.getElementById("roleOverlay").style.pointerEvents = "none";
+    function hideOverlay() {
+      const ov = document.getElementById("roleOverlay");
+      ov.style.opacity="0"; ov.style.pointerEvents="none";
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  SYNC UI
-    // ══════════════════════════════════════════════════════════════
+    // ══════════════════════════════════════
+    //  SYNC UI  (dual: admin dot + emp dot)
+    // ══════════════════════════════════════
     function setSyncUI(state, msg) {
-      document.getElementById("syncDot").className    = "sync-dot " + (state || "");
-      document.getElementById("syncStatusText").textContent = msg;
+      // Admin dashboard dot
+      const dot  = document.getElementById("syncDot");
+      const text = document.getElementById("syncStatusText");
+      if (dot)  dot.className  = "sync-dot "+(state||"");
+      if (text) text.textContent = msg;
+      // Employee sync card dot
+      const dot2  = document.getElementById("syncDotEmp");
+      const text2 = document.getElementById("syncStatusEmp");
+      if (dot2)  dot2.className   = "sync-dot "+(state||"");
+      if (text2) text2.textContent = msg;
     }
 
     function initSyncDisplay() {
       const last = getLastSyncDisplay();
-      setSyncUI(last ? "ok" : "", last ? "Last synced " + last : "Not synced yet");
+      setSyncUI(last?"ok":"", last?"Last synced "+last:"Not synced yet");
     }
 
-    // Admin: pull only (reads employee history without overwriting settings)
-    async function doAdminSync() {
-      const icon = document.getElementById("adminSyncIcon");
-      const sub  = document.getElementById("adminSyncSub");
-      setSyncUI("busy", "Pulling from cloud…");
-      icon.textContent = "⏳"; sub.textContent = "Pulling…";
+    async function adminPull() {
+      const icon=document.getElementById("adminSyncIcon"), sub=document.getElementById("adminSyncSub");
+      setSyncUI("busy","Pulling…"); icon.textContent="⏳"; sub.textContent="Pulling…";
       try {
         await syncPull();
-        setSyncUI("ok", "Synced " + getLastSyncDisplay());
-        icon.textContent = "✅"; sub.textContent = "Up to date";
-        loadAdminTodayCard();
-        setTimeout(() => { icon.textContent = "☁️"; sub.textContent = "Pull employee data"; }, 3000);
+        setSyncUI("ok","Synced "+getLastSyncDisplay());
+        icon.textContent="✅"; sub.textContent="Up to date";
+        loadAdminToday();
+        setTimeout(()=>{ icon.textContent="☁️"; sub.textContent="Pull latest data"; },3000);
       } catch(e) {
-        setSyncUI("error", "⚠ " + (e.message || "Sync failed"));
-        icon.textContent = "⚠️"; sub.textContent = "Failed";
-        setTimeout(() => { icon.textContent = "☁️"; sub.textContent = "Pull employee data"; initSyncDisplay(); }, 4000);
+        setSyncUI("error","⚠ "+(e.message||"Sync failed"));
+        icon.textContent="⚠️"; sub.textContent="Failed";
+        setTimeout(()=>{ icon.textContent="☁️"; sub.textContent="Pull latest data"; initSyncDisplay(); },4000);
       }
     }
 
-    // Employee: auto-pull on load + every 3 min
     async function autoPull() {
       if (localStorage.getItem("brewsShiftActive")) return;
-      setSyncUI("busy", "Auto-syncing…");
-      try {
-        await syncPull();
-        setSyncUI("ok", "Auto-synced " + getLastSyncDisplay());
-      } catch {
-        setSyncUI("", "Auto-sync failed — will retry");
-      }
+      setSyncUI("busy","Auto-syncing…");
+      try { await syncPull(); setSyncUI("ok","Auto-synced "+getLastSyncDisplay()); }
+      catch { setSyncUI("","Sync failed — will retry"); }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    //  HOME SCREENS
-    // ══════════════════════════════════════════════════════════════
-    function loadAdminTodayCard() {
+    // ══════════════════════════════════════
+    //  SHOW CORRECT HOME
+    // ══════════════════════════════════════
+    function loadAdminToday() {
       try {
-        const history = JSON.parse(localStorage.getItem("inventoryHistory") || "[]");
-        const today   = new Date().toISOString().split("T")[0];
-        const entry   = history.find(h => h.date === today);
-        const val     = document.getElementById("adminTodayVal");
-        const sub     = document.getElementById("adminTodaySub");
-        if (!entry) { val.textContent = "—"; sub.textContent = "No entry yet for today"; return; }
-        // Parse final total from stored HTML
-        const div = document.createElement("div");
-        div.innerHTML = entry.results;
-        let total = "—";
+        const hist  = JSON.parse(localStorage.getItem("inventoryHistory")||"[]");
+        const today = new Date().toISOString().split("T")[0];
+        const entry = hist.find(h=>h.date===today);
+        const val   = document.getElementById("adminTodayVal");
+        const sub   = document.getElementById("adminTodaySub");
+        if (!entry) { val.textContent="—"; sub.textContent="No entry yet for today"; return; }
+        const div = document.createElement("div"); div.innerHTML=entry.results;
+        let total="—";
         for (const row of div.querySelectorAll("tr")) {
-          const cells = row.querySelectorAll("td");
-          if (cells.length >= 2 && cells[0].textContent.includes("Final Total"))
-            { total = cells[1].textContent.trim(); break; }
+          const cells=row.querySelectorAll("td");
+          if (cells.length>=2&&cells[0].textContent.includes("Final Total")){ total=cells[1].textContent.trim(); break; }
         }
-        val.textContent = total;
-        sub.textContent = "Saved today · tap History for full receipt";
-      } catch {}
+        val.textContent=total; sub.textContent="Saved today · tap History for full receipt";
+      } catch{}
     }
 
-    const GREETINGS = [
-      {e:"☕",msg:"Ready to brew?",sub:"Let's make today count."},
-      {e:"🌅",msg:"Good shift starts here",sub:"You got this."},
-      {e:"💪",msg:"Brew hard, count harder",sub:"Every cup adds up."},
-      {e:"🧋",msg:"Let's get brewing!",sub:"Track it. Own it."},
-      {e:"✨",msg:"Another day, another sip",sub:"Make it a great one."},
-      {e:"🚀",msg:"Let's hit that quota!",sub:"₱3,000 won't earn itself."},
-      {e:"🎯",msg:"Eyes on the goal",sub:"₱3,000 is just the beginning."},
-      {e:"💰",msg:"Every peso counts",sub:"Track it carefully today."},
-      {e:"🏆",msg:"New shift, new wins",sub:"Yesterday doesn't count now."},
-      {e:"🌟",msg:"One shift at a time",sub:"Make it count."},
-      {e:"☕",msg:"BREWS.CO is open",sub:"Have an amazing shift!"},
-      {e:"🔥",msg:"You're on fire today",sub:"Don't stop now."},
-    ];
-
-    function bootHome() {
-      const role = getRole();
-      if (!role) return;
-      if (role === "admin") {
-        document.body.classList.add("admin-home");
-        document.getElementById("adminHome").style.display = "flex";
-        document.getElementById("empNav").style.display    = "none";
-        loadAdminTodayCard();
-        initSyncDisplay();
-        // Admin auto-pulls on load to get latest employee data
-        setTimeout(() => doAdminSync(), 1500);
-      } else {
-        document.getElementById("empHome").style.display = "flex";
-        document.getElementById("empNav").style.display  = "flex";
-        if (localStorage.getItem("brewsShiftActive")) {
-          document.getElementById("shiftNavLabel").textContent = "↩ Shift";
-        }
-        if (localStorage.getItem("brewsResumeShift"))
-          document.getElementById("resumeBanner").style.display = "flex";
-        const g = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
-        document.getElementById("homeEmoji").textContent = g.e;
-        document.getElementById("homeMsg").textContent   = g.msg;
-        document.getElementById("homeSub").textContent   = g.sub;
-        document.getElementById("homeDate").textContent  = new Date().toLocaleDateString("en-PH",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-        initSyncDisplay();
-        // Employee auto-pulls settings from cloud
-        setTimeout(() => autoPull(), 1500);
-        setInterval(() => autoPull(), 3 * 60 * 1000);
-      }
+    function showAdmin() {
+      document.getElementById("adminDash").style.display = "flex";
+      document.getElementById("settingsFab").style.display = "none"; // admin uses tile instead
+      document.querySelector(".home-view").style.display  = "none";
+      document.querySelector(".bottom-nav").style.display = "none";
+      loadAdminToday(); initSyncDisplay();
+      // Auto-pull on load to get latest employee data
+      setTimeout(()=>adminPull(), 1500);
     }
 
-    // ══════════════════════════════════════════════════════════════
+    function showEmployee() {
+      document.querySelector(".home-view").style.display  = "flex";
+      document.querySelector(".bottom-nav").style.display = "flex";
+      document.getElementById("settingsFab").style.display = "none";
+      document.getElementById("adminDash").style.display   = "none";
+      document.getElementById("syncRoleTag").textContent   = "👤 EMPLOYEE";
+      // No push/pull buttons for employees
+      document.getElementById("syncBtnsEmp").innerHTML = "";
+      if (localStorage.getItem("brewsShiftActive"))
+        document.getElementById("shiftNavLabel").textContent = "↩ Shift";
+      if (localStorage.getItem("brewsResumeShift"))
+        document.getElementById("resumeBanner").style.display = "flex";
+      initSyncDisplay();
+      setTimeout(()=>autoPull(), 1500);
+      setInterval(()=>autoPull(), 3*60*1000);
+    }
+
+    // ══════════════════════════════════════
     //  BOOT
-    // ══════════════════════════════════════════════════════════════
-    if (getRole()) {
-      hideRoleOverlay();
-      bootHome();
+    // ══════════════════════════════════════
+    const _role = getRole();
+    if (_role === "admin") {
+      hideOverlay(); showAdmin();
+    } else if (_role === "employee") {
+      hideOverlay(); showEmployee();
     } else {
-      // Show role overlay with animation
-      requestAnimationFrame(() => {
-        const ov = document.getElementById("roleOverlay");
-        ov.style.opacity = "0"; ov.style.pointerEvents = "all";
-        requestAnimationFrame(() => ov.classList.add("visible"));
-      });
+      // Show pairing overlay
+      requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById("roleOverlay").classList.add("show")));
     }
 
-    sessionStorage.setItem("brewsNav", "1");
+    sessionStorage.setItem("brewsNav","1");
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("service-worker.js");
+  </script>
+  <script>
+    if (localStorage.getItem("brewsShiftActive")) {
+      const lbl = document.getElementById("shiftNavLabel");
+      if (lbl) lbl.textContent = "↩ Shift";
+    }
   </script>
 
   <script>
-    // ══════════════════════════════════════════════════════════════
-    //  SETTINGS MODAL (admin only)
-    // ══════════════════════════════════════════════════════════════
-    const CAT_LABELS = {milktea:"Milk Tea",fruittea:"Fruit Tea",icedcoffee:"Iced Coffee",hotcoffee:"Hot Coffee"};
-    let _ws = null;
+    // ── Settings modal ────────────────────────────────────────────────────────
+    const CAT_LABELS = { milktea:"Milk Tea", fruittea:"Fruit Tea", icedcoffee:"Iced Coffee", hotcoffee:"Hot Coffee" };
+    let _ws = null; // working settings clone
 
     function openSettings() {
       _ws = JSON.parse(JSON.stringify(getSettings()));
@@ -620,68 +572,74 @@
     }
     function closeSettings() { document.getElementById("settingsModal").classList.remove("open"); }
     function handleSettingsOverlay(e) { if (e.target === document.getElementById("settingsModal")) closeSettings(); }
+
     function confirmResetSettings() {
-      if (!confirm("Reset all settings to defaults?")) return;
-      resetSettings(); _ws = JSON.parse(JSON.stringify(getSettings())); renderSettingsModal();
+      if (!confirm("Reset all settings to defaults? This cannot be undone.")) return;
+      resetSettings();
+      _ws = JSON.parse(JSON.stringify(getSettings()));
+      renderSettingsModal();
     }
+
     function saveAndCloseSettings() {
-      collectFromUI(); saveSettings(_ws);
-      // Also update pairing code if changed
-      const codeEl = document.getElementById("sp_pairingCode");
-      if (codeEl && codeEl.value.trim()) {
-        const code = codeEl.value.trim();
-        localStorage.setItem(PAIRING_KEY, code);
-        try {
-          const s = JSON.parse(localStorage.getItem("brewsSettings") || "{}");
-          s._pairingCode = code;
-          localStorage.setItem("brewsSettings", JSON.stringify(s));
-        } catch {}
-      }
+      collectFromUI();
+      saveSettings(_ws);
       closeSettings();
     }
 
     function n(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+
     function collectFromUI() {
-      _ws.prices = {M:n("sp_M"),L:n("sp_L"),S:n("sp_S"),MC:n("sp_MC"),LC:n("sp_LC"),HC:n("sp_HC"),FTM:n("sp_FTM"),FTL:n("sp_FTL")};
+      _ws.prices = { M:n("sp_M"), L:n("sp_L"), S:n("sp_S"), MC:n("sp_MC"), LC:n("sp_LC"), HC:n("sp_HC"), FTM:n("sp_FTM"), FTL:n("sp_FTL") };
       _ws.addonPrices = {};
       document.querySelectorAll(".saddon-row").forEach(r => {
-        const name = r.querySelector(".saddon-name")?.value?.trim();
+        const name  = r.querySelector(".saddon-name")?.value?.trim();
         const price = parseFloat(r.querySelector(".saddon-price")?.value) || 0;
         if (name) _ws.addonPrices[name] = price;
       });
-      _ws.salaryBase = n("sp_salaryBase"); _ws.salaryBonusThreshold = n("sp_bonusThreshold");
-      _ws.salaryBonusPerK = n("sp_bonusPerK"); _ws.quotaStart = n("sp_quotaStart"); _ws.lowStock = n("sp_lowStock");
+      _ws.salaryBase           = n("sp_salaryBase");
+      _ws.salaryBonusThreshold = n("sp_bonusThreshold");
+      _ws.salaryBonusPerK      = n("sp_bonusPerK");
+      _ws.quotaStart           = n("sp_quotaStart");
+      _ws.lowStock             = n("sp_lowStock");
     }
+
     function addFlavorToCategory(cat) {
       const input = document.getElementById("sfi_" + cat);
-      const val = input?.value?.trim();
+      const val   = input?.value?.trim();
       if (!val) return;
       if (!_ws.flavors[cat]) _ws.flavors[cat] = [];
       if (!_ws.flavors[cat].includes(val)) { _ws.flavors[cat].push(val); renderFlavorCat(cat); }
       input.value = "";
     }
+
     function removeFlavorFromCategory(cat, flavor) {
-      _ws.flavors[cat] = (_ws.flavors[cat]||[]).filter(f => f !== flavor); renderFlavorCat(cat);
+      _ws.flavors[cat] = (_ws.flavors[cat] || []).filter(f => f !== flavor);
+      renderFlavorCat(cat);
     }
+
     function renderFlavorCat(cat) {
-      const c = document.getElementById("sfcat_" + cat); if (!c) return;
+      const c = document.getElementById("sfcat_" + cat);
+      if (!c) return;
       const flavors = _ws.flavors[cat] || [];
       c.querySelector(".sflavor-pills").innerHTML = flavors.length
         ? flavors.map(f => `<span class="sflavor-pill">${f}<button class="sflavor-pill-del" onclick="removeFlavorFromCategory('${cat}','${f.replace(/'/g,"\\'")}')">✕</button></span>`).join("")
-        : `<span style="font-size:0.76rem;color:#c4a98a;">No flavors</span>`;
+        : `<span style="font-size:0.76rem;color:#c4a98a;">No flavors — add below</span>`;
     }
+
     function fi(id, label, val) {
       return `<div class="smodal-field"><label class="smodal-label">${label}</label><input class="smodal-input" id="${id}" type="number" value="${val}"></div>`;
     }
+
     function renderSettingsModal() {
       const s = _ws;
-      const addonRows = Object.entries(s.addonPrices).map(([name,price]) => `
+      const addonRows = Object.entries(s.addonPrices).map(([name, price]) => `
         <div class="expense-row saddon-row">
-          <input class="smodal-input saddon-name" type="text" value="${name}" placeholder="Add-on name">
+          <input class="smodal-input saddon-name"  type="text"   value="${name}"  placeholder="Add-on name">
           <input class="smodal-input saddon-price" type="number" value="${price}" placeholder="₱0">
           <button type="button" onclick="this.parentElement.remove();">✕</button>
         </div>`).join("");
-      const flavorHTML = Object.entries(CAT_LABELS).map(([cat,label]) => `
+
+      const flavorHTML = Object.entries(CAT_LABELS).map(([cat, label]) => `
         <div class="sflavor-cat" id="sfcat_${cat}">
           <div class="sflavor-cat-title">${label}</div>
           <div class="sflavor-pills"></div>
@@ -691,7 +649,7 @@
             <button class="sflavor-add-btn" onclick="addFlavorToCategory('${cat}')">+ Add</button>
           </div>
         </div>`).join("");
-      const currentCode = localStorage.getItem(PAIRING_KEY) || "";
+
       document.getElementById("settingsBody").innerHTML = `
         <div class="smodal-section">
           <div class="smodal-section-title">Drink Prices (₱)</div>
@@ -714,6 +672,7 @@
             ${fi("sp_bonusThreshold","Bonus Threshold (₱)",s.salaryBonusThreshold)}
             ${fi("sp_bonusPerK","Bonus per ₱1,000 (₱)",s.salaryBonusPerK)}
           </div>
+          <div style="font-size:0.72rem;color:#b08060;margin-top:8px;line-height:1.5;">Staff earns the base salary when cup sales meet or exceed it. If cup sales are <em>less than</em> the base salary amount, no salary is deducted. Once sales hit the bonus threshold, the bonus kicks in — plus that same amount for every extra ₱1,000.</div>
         </div>
         <div class="smodal-section">
           <div class="smodal-section-title">Quota &amp; Low Stock</div>
@@ -721,29 +680,92 @@
             ${fi("sp_quotaStart","Quota Toast at (₱)",s.quotaStart)}
             ${fi("sp_lowStock","Low Stock Warning (cups)",s.lowStock)}
           </div>
+          <div style="font-size:0.72rem;color:#b08060;margin-top:8px;line-height:1.5;">Toast fires at the quota amount then every ₱1,000 after. Low stock warning highlights a drink button when remaining cups drop to this count.</div>
         </div>
         <div class="smodal-section">
           <div class="smodal-section-title">Flavors</div>
-          <div style="font-size:0.76rem;color:#9a7a5e;margin-bottom:12px;">Add or remove flavors per category.</div>
+          <div style="font-size:0.76rem;color:#9a7a5e;margin-bottom:12px;">Add or remove flavors per drink category. Press Enter or tap + Add.</div>
           ${flavorHTML}
-        </div>
-        <div class="smodal-section">
-          <div class="smodal-section-title">👑 Pairing Code</div>
-          <div style="font-size:0.76rem;color:#9a7a5e;margin-bottom:10px;line-height:1.5;">Employees enter this to bind their device. After changing, save and the new code will sync to cloud automatically.</div>
-          <div class="smodal-field">
-            <label class="smodal-label">Pairing Code</label>
-            <input class="smodal-input" id="sp_pairingCode" type="text" value="${currentCode}" placeholder="e.g. BREWS2025" style="letter-spacing:0.1em;font-weight:700;">
-          </div>
-          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e8d5c4;">
-            <div style="font-size:0.72rem;color:#b08060;margin-bottom:8px;">Reset this device's role pairing:</div>
-            <button class="role-btn role-btn-emp" style="max-width:180px;padding:9px 14px;font-size:0.8rem;width:auto;"
-              onclick="if(confirm('Reset role? You will need to pair this device again.')){localStorage.removeItem('${ROLE_KEY}');localStorage.removeItem('${PAIRING_KEY}');location.reload();}">
-              Reset Device Role
-            </button>
-          </div>
         </div>`;
+
       Object.keys(CAT_LABELS).forEach(cat => renderFlavorCat(cat));
     }
+  </script>
+
+  <script>
+    const GREETINGS = [
+      { e:"☕", msg:"Ready to brew?",                      sub:"Let's make today count."                   },
+      { e:"🌅", msg:"Good shift starts here",              sub:"You got this."                             },
+      { e:"💪", msg:"Brew hard, count harder",             sub:"Every cup adds up."                        },
+      { e:"🧋", msg:"Let's get brewing!",                  sub:"Track it. Own it."                         },
+      { e:"✨", msg:"Another day, another sip",            sub:"Make it a great one."                      },
+      { e:"☕", msg:"Rise & brew",                         sub:"Time to make it happen."                   },
+      { e:"😄", msg:"Cups don't count themselves",         sub:"Good thing you do."                        },
+      { e:"🎯", msg:"Today's a good day to sell out",      sub:"Let's get to work."                        },
+      { e:"🧋", msg:"Milk tea season, always",             sub:"Ready when you are."                       },
+      { e:"🚀", msg:"Let's hit that quota!",               sub:"₱3,000 won't earn itself."                 },
+      { e:"✅", msg:"Freshly brewed and ready",            sub:"Start when you're set."                    },
+      { e:"🌟", msg:"One shift at a time",                 sub:"Make it count."                            },
+      { e:"🎶", msg:"Shake it, brew it, count it",         sub:"Let's go!"                                 },
+      { e:"☕", msg:"The best cup is the next one",        sub:"Keep going."                               },
+      { e:"💼", msg:"Grind first, chill later",            sub:"Let's have a great shift."                 },
+      { e:"🧋", msg:"Small cups, big dreams",              sub:"You're building something real."           },
+      { e:"✨", msg:"Consistency hits different",          sub:"Show up and show out."                     },
+      { e:"☕", msg:"Brew goals loading…",                 sub:"Almost there, let's go."                   },
+      { e:"🏆", msg:"New shift, new wins",                 sub:"Yesterday doesn't count now."              },
+      { e:"🚀", msg:"Keep the cups moving",                sub:"Revenue doesn't lie."                      },
+      { e:"🍵", msg:"Flavor by flavor, shift by shift",    sub:"You're doing great."                       },
+      { e:"😄", msg:"The line won't serve itself",         sub:"Let's brew something amazing."             },
+      { e:"💰", msg:"Every peso counts",                   sub:"Track it carefully today."                 },
+      { e:"☕", msg:"BREWS.CO is open for business",       sub:"Have an amazing shift!"                    },
+      { e:"👑", msg:"You're the barista and the boss",     sub:"Act like it."                              },
+      { e:"🧋", msg:"Stir things up today",                sub:"In the best way possible."                 },
+      { e:"💸", msg:"Tally up and get paid",               sub:"Numbers don't lie — let's go."            },
+      { e:"✨", msg:"Another shift, another story",        sub:"Make it a good one."                       },
+      { e:"🔥", msg:"You're on fire today",                sub:"Don't stop now."                           },
+      { e:"💡", msg:"Work smart, brew smarter",            sub:"Every detail matters."                     },
+      { e:"🌈", msg:"Great things take great effort",      sub:"And you've got plenty of it."              },
+      { e:"⚡", msg:"Charged up and ready",                sub:"Let's make this shift legendary."          },
+      { e:"🎉", msg:"Another chance to be great",          sub:"Don't waste it."                           },
+      { e:"🏅", msg:"Champions show up every day",         sub:"Even on slow days."                        },
+      { e:"💎", msg:"Quality over quantity",               sub:"But hey, both would be nice."              },
+      { e:"🌙", msg:"Every late shift counts",             sub:"Rest comes after."                         },
+      { e:"🤝", msg:"You and your team got this",          sub:"Brew together, win together."              },
+      { e:"📈", msg:"Yesterday was good",                  sub:"Today will be better."                     },
+      { e:"🎯", msg:"Eyes on the goal",                    sub:"₱3,000 is just the beginning."             },
+      { e:"🌊", msg:"Go with the flow",                    sub:"Orders in, revenue up."                    },
+      { e:"🦁", msg:"Own the shift",                       sub:"Like the boss you are."                    },
+      { e:"🍀", msg:"Feeling lucky today?",                sub:"Make your own luck."                       },
+      { e:"🧠", msg:"Track smart, earn more",              sub:"Every number tells a story."               },
+      { e:"☀️", msg:"A new day, a fresh start",            sub:"Let's brew something beautiful."           },
+      { e:"🎸", msg:"Hit the right notes today",           sub:"Flavor, service, revenue."                 },
+      { e:"🏃", msg:"Don't look back",                     sub:"The cups won't wait."                      },
+      { e:"💬", msg:"Every order is a win",                sub:"Stack them up."                            },
+      { e:"🌺", msg:"Keep things fresh",                   sub:"Just like the drinks."                     },
+      { e:"🛸", msg:"To the moon and beyond",              sub:"Starting with ₱3,000."                     },
+      { e:"🍃", msg:"Stay cool, brew hot",                 sub:"That's the BREWS.CO way."                  },
+      { e:"👊", msg:"Hit that target",                     sub:"One cup at a time."                        },
+      { e:"🎁", msg:"Today is a gift",                     sub:"Unwrap it with a great shift."             },
+      { e:"🌻", msg:"Bloom where you're brewed",           sub:"You're exactly where you need to be."      },
+      { e:"⭐", msg:"Be someone's favorite part of the day", sub:"Start with their order."                 },
+      { e:"🧩", msg:"You're the missing piece",            sub:"This shift needs you."                     },
+      { e:"🎪", msg:"Show them what you've got",           sub:"The floor is yours."                       },
+    ];
+    // Random greeting on every load (not day-based)
+    const g = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+    document.getElementById("homeEmoji").textContent = g.e;
+    document.getElementById("homeMsg").textContent   = g.msg;
+    document.getElementById("homeSub").textContent   = g.sub;
+    document.getElementById("homeDate").textContent  = new Date().toLocaleDateString("en-PH", {
+      weekday:"long", year:"numeric", month:"long", day:"numeric"
+    });
+    if (localStorage.getItem("brewsResumeShift"))
+      document.getElementById("resumeBanner").style.display = "flex";
+
+    sessionStorage.setItem('brewsNav', '1');
+
+    if ("serviceWorker" in navigator)
+      navigator.serviceWorker.register("service-worker.js");
   </script>
 </body>
 </html>
