@@ -191,12 +191,6 @@
     }
     .log-delete-btn:hover { background: #fae0de; }
 
-    .modal-save-btn {
-      background: linear-gradient(135deg,#d4a97c,#7a5c3e); color:#fff;
-      border: none; border-radius: 10px; padding: 8px 13px;
-      font-weight: 700; font-size: 0.84rem; cursor: pointer; font-family: inherit; transition: all .16s;
-    }
-    .modal-save-btn:hover { background: linear-gradient(135deg,#7a5c3e,#5c4631); transform:translateY(-1px); }
     @media (max-width: 600px) {
       .calendar td { height: 50px; padding: 4px; border-radius: 8px; }
       .day-total { font-size: 0.65rem; }
@@ -274,9 +268,9 @@
     <div class="modal-header">
       <h3 id="modalDate"></h3>
       <div class="modal-header-actions">
-        <button class="modal-save-btn" onclick="saveReceiptAsImage()">🖼 Save Image</button>
         <button class="modal-delete-btn" onclick="deleteCurrentEntry()">🗑 Delete</button>
         <button class="modal-close" onclick="closeModal()">✕ Close</button>
+        <button class="modal-close" id="saveImgBtn" onclick="saveReceiptAsImage()" style="background:linear-gradient(135deg,#d4a97c,#7a5c3e);color:#fff;border-color:transparent;">🖼 Save</button>
       </div>
     </div>
     <div class="modal-body" id="modalBody"></div>
@@ -285,6 +279,12 @@
 
 <script src="js/history.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  window.syncPull = async function(){ console.warn("sync not loaded"); };
+</script>
+<script src="js/sync.js"></script>
 <script>
   const today    = new Date();
   let curYear    = today.getFullYear();
@@ -488,47 +488,6 @@
     document.getElementById("modalOverlay").classList.add("open");
   }
 
-  function saveReceiptAsImage() {
-    if (!currentModalDate || typeof html2canvas === "undefined") return;
-    const btn = document.querySelector(".modal-save-btn");
-    btn.textContent = "Saving…"; btn.disabled = true;
-
-    // Build a standalone receipt element (same style as calculate page)
-    const el = document.createElement("div");
-    el.style.cssText = `position:fixed;left:-9999px;top:0;width:480px;background:#fffaf5;
-      font-family:"Inter","Segoe UI",sans-serif;padding:36px 32px 40px;
-      box-sizing:border-box;color:#3d2b1a;`;
-    el.innerHTML = `
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:1.6rem;font-weight:800;letter-spacing:0.12em;color:#7a5c3e;">BREWS.CO</div>
-        <div style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:#b08060;margin-top:3px;">Daily Inventory Receipt</div>
-        <div style="font-size:0.8rem;color:#9a7a5e;margin-top:7px;">${currentModalDate}</div>
-      </div>
-      <div style="border-top:1.5px dashed #d4b89e;margin:0 0 16px;"></div>
-      ${document.getElementById("modalBody").innerHTML}
-      <div style="text-align:center;margin-top:20px;font-size:0.62rem;color:#c4a98a;letter-spacing:0.1em;text-transform:uppercase;">
-        Generated ${new Date().toLocaleString("en-PH")}
-      </div>`;
-    document.body.appendChild(el);
-
-    const dp = currentModalDate.split("-");
-    const filename = `${dp[1]}${dp[2]}${dp[0].slice(2)}_receipt.png`;
-
-    html2canvas(el, {backgroundColor:"#fffaf5", scale:2, useCORS:true, logging:false})
-      .then(canvas => {
-        document.body.removeChild(el);
-        const link = document.createElement("a");
-        link.download = filename;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      }).catch(() => {
-        if (document.body.contains(el)) document.body.removeChild(el);
-        alert("Could not save image. Try again.");
-      }).finally(() => {
-        btn.textContent = "🖼 Save Image"; btn.disabled = false;
-      });
-  }
-
   function closeModal() {
     document.getElementById("modalOverlay").classList.remove("open");
     currentModalDate = "";
@@ -678,6 +637,65 @@
   renderRetentionPills();
   renderOrderLogs();
   renderCalendar();
+
+  // Admin: auto-pull latest employee data on load
+  (async function() {
+    if (localStorage.getItem("brewsDeviceRole") !== "admin") return;
+    if (typeof syncPull !== "function") return;
+    try {
+      await syncPull();
+      // Re-render with fresh data
+      renderCalendar();
+      renderOrderLogs();
+    } catch(e) { console.warn("Calendar auto-pull failed:", e.message); }
+  })();
+
+  // ── Save receipt as PNG (html2canvas) ────────────────────────────────────
+  let currentModalDate = null;
+  const _origOpenModal = window.openModal;
+
+  function openModal(dateStr, entry) {
+    currentModalDate = dateStr;
+    document.getElementById("modalDate").textContent = `Receipt — ${dateStr}`;
+    document.getElementById("modalBody").innerHTML   = entry.results;
+    document.getElementById("modalOverlay").classList.add("open");
+  }
+
+  function saveReceiptAsImage() {
+    if (!currentModalDate) return;
+    const btn = document.getElementById("saveImgBtn");
+    if (typeof html2canvas === "undefined") { alert("Image library not loaded. Refresh and try again."); return; }
+    btn.textContent = "Saving…"; btn.disabled = true;
+
+    const el = document.createElement("div");
+    el.style.cssText = `position:fixed;left:-9999px;top:0;width:480px;background:#fffaf5;
+      font-family:"Inter","Segoe UI",sans-serif;padding:36px 32px 40px;
+      box-sizing:border-box;color:#3d2b1a;`;
+    el.innerHTML = `
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:1.6rem;font-weight:800;letter-spacing:0.12em;color:#7a5c3e;">BREWS.CO</div>
+        <div style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:#b08060;margin-top:3px;">Daily Inventory Receipt</div>
+        <div style="font-size:0.8rem;color:#9a7a5e;margin-top:7px;">${currentModalDate}</div>
+      </div>
+      <div style="border-top:1.5px dashed #d4b89e;margin:0 0 16px;"></div>
+      ${document.getElementById("modalBody").innerHTML}
+      <div style="text-align:center;margin-top:20px;font-size:0.62rem;color:#c4a98a;letter-spacing:0.1em;text-transform:uppercase;">
+        Generated ${new Date().toLocaleString("en-PH")}
+      </div>`;
+    document.body.appendChild(el);
+
+    const dp = currentModalDate.split("-");
+    const filename = `${dp[1]}${dp[2]}${dp[0].slice(2)}_receipt.png`;
+
+    html2canvas(el, { backgroundColor:"#fffaf5", scale:2, useCORS:true, logging:false })
+      .then(canvas => {
+        document.body.removeChild(el);
+        const link = document.createElement("a");
+        link.download = filename; link.href = canvas.toDataURL("image/png"); link.click();
+      })
+      .catch(() => { if (document.body.contains(el)) document.body.removeChild(el); alert("Could not save image. Try again."); })
+      .finally(() => { btn.textContent = "🖼 Save"; btn.disabled = false; });
+  }
 </script>
 
 <nav class="bottom-nav">
