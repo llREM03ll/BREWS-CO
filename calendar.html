@@ -191,21 +191,13 @@
     }
     .log-delete-btn:hover { background: #fae0de; }
 
-    .modal-print-btn {
-      background: #f0e4d8; border: 1.5px solid #e0c9b8; border-radius: 10px;
-      padding: 8px 13px; font-weight: 700; font-size: 0.84rem;
-      color: #7a5c3e; cursor: pointer; font-family: inherit; transition: all .16s;
+    .modal-save-btn {
+      background: linear-gradient(135deg,#d4a97c,#7a5c3e); color:#fff;
+      border: none; border-radius: 10px; padding: 8px 13px;
+      font-weight: 700; font-size: 0.84rem; cursor: pointer; font-family: inherit; transition: all .16s;
     }
-    .modal-print-btn:hover { background: #e4d0bf; }
-    @media print {
-      body > *:not(#printArea) { display: none !important; }
-      #printArea {
-        display: block !important; position: fixed; inset: 0;
-        background: #fff; padding: 24px; font-family: "Inter", sans-serif;
-        font-size: 13px; color: #000;
-      }
-    }
-    #printArea { display: none; }
+    .modal-save-btn:hover { background: linear-gradient(135deg,#7a5c3e,#5c4631); transform:translateY(-1px); }
+    @media (max-width: 600px) {
       .calendar td { height: 50px; padding: 4px; border-radius: 8px; }
       .day-total { font-size: 0.65rem; }
       .day-num   { font-size: 0.65rem; }
@@ -282,7 +274,7 @@
     <div class="modal-header">
       <h3 id="modalDate"></h3>
       <div class="modal-header-actions">
-        <button class="modal-print-btn" onclick="printReceipt()">🖨 Print</button>
+        <button class="modal-save-btn" onclick="saveReceiptAsImage()">🖼 Save Image</button>
         <button class="modal-delete-btn" onclick="deleteCurrentEntry()">🗑 Delete</button>
         <button class="modal-close" onclick="closeModal()">✕ Close</button>
       </div>
@@ -291,10 +283,8 @@
   </div>
 </div>
 
-<!-- Hidden print area -->
-<div id="printArea"></div>
-
 <script src="js/history.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
   const today    = new Date();
   let curYear    = today.getFullYear();
@@ -498,21 +488,45 @@
     document.getElementById("modalOverlay").classList.add("open");
   }
 
-  function printReceipt() {
-    if (!currentModalDate) return;
-    const body    = document.getElementById("modalBody").innerHTML;
-    const printEl = document.getElementById("printArea");
-    printEl.innerHTML = `
-      <div style="text-align:center;margin-bottom:16px;">
-        <div style="font-size:1.4rem;font-weight:800;letter-spacing:0.1em;color:#7a5c3e;">BREWS.CO</div>
-        <div style="font-size:0.7rem;letter-spacing:0.14em;text-transform:uppercase;color:#b08060;">Daily Receipt</div>
-        <div style="font-size:0.8rem;color:#9a7a5e;margin-top:4px;">${currentModalDate}</div>
+  function saveReceiptAsImage() {
+    if (!currentModalDate || typeof html2canvas === "undefined") return;
+    const btn = document.querySelector(".modal-save-btn");
+    btn.textContent = "Saving…"; btn.disabled = true;
+
+    // Build a standalone receipt element (same style as calculate page)
+    const el = document.createElement("div");
+    el.style.cssText = `position:fixed;left:-9999px;top:0;width:480px;background:#fffaf5;
+      font-family:"Inter","Segoe UI",sans-serif;padding:36px 32px 40px;
+      box-sizing:border-box;color:#3d2b1a;`;
+    el.innerHTML = `
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:1.6rem;font-weight:800;letter-spacing:0.12em;color:#7a5c3e;">BREWS.CO</div>
+        <div style="font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:#b08060;margin-top:3px;">Daily Inventory Receipt</div>
+        <div style="font-size:0.8rem;color:#9a7a5e;margin-top:7px;">${currentModalDate}</div>
       </div>
-      ${body}
-      <div style="text-align:center;margin-top:20px;font-size:0.72rem;color:#b08060;">
-        Printed ${new Date().toLocaleString("en-PH")}
+      <div style="border-top:1.5px dashed #d4b89e;margin:0 0 16px;"></div>
+      ${document.getElementById("modalBody").innerHTML}
+      <div style="text-align:center;margin-top:20px;font-size:0.62rem;color:#c4a98a;letter-spacing:0.1em;text-transform:uppercase;">
+        Generated ${new Date().toLocaleString("en-PH")}
       </div>`;
-    window.print();
+    document.body.appendChild(el);
+
+    const dp = currentModalDate.split("-");
+    const filename = `${dp[1]}${dp[2]}${dp[0].slice(2)}_receipt.png`;
+
+    html2canvas(el, {backgroundColor:"#fffaf5", scale:2, useCORS:true, logging:false})
+      .then(canvas => {
+        document.body.removeChild(el);
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }).catch(() => {
+        if (document.body.contains(el)) document.body.removeChild(el);
+        alert("Could not save image. Try again.");
+      }).finally(() => {
+        btn.textContent = "🖼 Save Image"; btn.disabled = false;
+      });
   }
 
   function closeModal() {
