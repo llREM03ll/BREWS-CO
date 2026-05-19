@@ -644,23 +644,12 @@
     if (typeof syncPull !== "function") return;
     try {
       await syncPull();
-      // Re-render with fresh data
       renderCalendar();
       renderOrderLogs();
     } catch(e) { console.warn("Calendar auto-pull failed:", e.message); }
   })();
 
   // ── Save receipt as PNG (html2canvas) ────────────────────────────────────
-  let currentModalDate = null;
-  const _origOpenModal = window.openModal;
-
-  function openModal(dateStr, entry) {
-    currentModalDate = dateStr;
-    document.getElementById("modalDate").textContent = `Receipt — ${dateStr}`;
-    document.getElementById("modalBody").innerHTML   = entry.results;
-    document.getElementById("modalOverlay").classList.add("open");
-  }
-
   function saveReceiptAsImage() {
     if (!currentModalDate) return;
     const btn = document.getElementById("saveImgBtn");
