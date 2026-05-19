@@ -258,37 +258,44 @@
 
   <!-- ══ ADMIN DASHBOARD ══ -->
   <div class="admin-dashboard" id="adminDash">
-    <a href="index.html" style="text-decoration:none;text-align:center;margin-bottom:24px;">
+    <a href="index.html" style="text-decoration:none;text-align:center;margin-bottom:20px;display:block;">
       <div class="brand">BREWS.CO</div>
       <div class="brand-sub">Admin Dashboard</div>
     </a>
+
+    <!-- Today's revenue card -->
     <div class="admin-today-card">
       <div class="admin-today-lbl">Today's Revenue</div>
       <div class="admin-today-val" id="adminTodayVal">—</div>
       <div class="admin-today-sub" id="adminTodaySub">No entry yet for today</div>
     </div>
+
+    <!-- Needs panel — shows low stock + OOS flavors from latest history -->
+    <div id="adminNeedsPanel" style="width:100%;max-width:400px;margin-bottom:12px;display:none;">
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.13em;text-transform:uppercase;
+        color:#9a7a5e;margin-bottom:8px;padding-left:2px;">📋 Needs from Last Entry</div>
+      <div id="adminNeedsBody" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
+    <!-- Nav tiles: History, Settings, Sync -->
     <div class="admin-grid">
       <a href="calendar.html" class="admin-tile">
         <span class="admin-tile-icon">📅</span>
         <span class="admin-tile-label">History</span>
         <span class="admin-tile-sub">Records & receipts</span>
       </a>
-      <a href="calculate.html" class="admin-tile">
-        <span class="admin-tile-icon">🧮</span>
-        <span class="admin-tile-label">Calculate</span>
-        <span class="admin-tile-sub">Review & compute</span>
-      </a>
       <button class="admin-tile" onclick="openSettings()">
         <span class="admin-tile-icon">⚙️</span>
         <span class="admin-tile-label">Settings</span>
-        <span class="admin-tile-sub">Prices & salary</span>
+        <span class="admin-tile-sub">Prices, salary & more</span>
       </button>
-      <button class="admin-tile" onclick="adminPull()">
+      <button class="admin-tile" onclick="adminPull()" style="grid-column:1/-1;">
         <span class="admin-tile-icon" id="adminSyncIcon">☁️</span>
-        <span class="admin-tile-label">Sync</span>
-        <span class="admin-tile-sub" id="adminSyncSub">Pull latest data</span>
+        <span class="admin-tile-label">Sync Now</span>
+        <span class="admin-tile-sub" id="adminSyncSub">Pull latest employee data</span>
       </button>
     </div>
+
     <div class="sync-card" style="max-width:400px;width:100%;">
       <div class="sync-row">
         <div class="sync-status">
@@ -476,6 +483,7 @@
         icon.textContent="✅"; sub.textContent="Up to date";
         loadAdminToday();
         setTimeout(()=>{ icon.textContent="☁️"; sub.textContent="Pull latest data"; },3000);
+        loadAdminNeeds();
       } catch(e) {
         setSyncUI("error","⚠ "+(e.message||"Sync failed"));
         icon.textContent="⚠️"; sub.textContent="Failed";
@@ -495,20 +503,67 @@
     // ══════════════════════════════════════
     function loadAdminToday() {
       try {
-        const hist  = JSON.parse(localStorage.getItem("inventoryHistory")||"[]");
+        const hist  = JSON.parse(localStorage.getItem("inventoryHistory") || "[]");
         const today = new Date().toISOString().split("T")[0];
-        const entry = hist.find(h=>h.date===today);
+        const entry = hist.find(h => h.date === today);
         const val   = document.getElementById("adminTodayVal");
         const sub   = document.getElementById("adminTodaySub");
-        if (!entry) { val.textContent="—"; sub.textContent="No entry yet for today"; return; }
-        const div = document.createElement("div"); div.innerHTML=entry.results;
-        let total="—";
-        for (const row of div.querySelectorAll("tr")) {
-          const cells=row.querySelectorAll("td");
-          if (cells.length>=2&&cells[0].textContent.includes("Final Total")){ total=cells[1].textContent.trim(); break; }
+        if (!entry) { val.textContent = "—"; sub.textContent = "No entry yet for today"; }
+        else {
+          const div = document.createElement("div"); div.innerHTML = entry.results;
+          let total = "—";
+          for (const row of div.querySelectorAll("tr")) {
+            const cells = row.querySelectorAll("td");
+            if (cells.length >= 2 && cells[0].textContent.includes("Final Total")) {
+              total = cells[1].textContent.trim(); break;
+            }
+          }
+          val.textContent = total;
+          sub.textContent = "Saved today · tap History for full receipt";
         }
-        val.textContent=total; sub.textContent="Saved today · tap History for full receipt";
-      } catch{}
+      } catch {}
+      loadAdminNeeds();
+    }
+
+    function loadAdminNeeds() {
+      try {
+        const items = [];
+        // Low stock cups from last ending
+        const cupsRaw = localStorage.getItem("brewsLastEndingCups");
+        if (cupsRaw) {
+          const cups = JSON.parse(cupsRaw);
+          const low  = (typeof getSettings === "function") ? (getSettings().lowStock ?? 5) : 5;
+          const labels = { endM:"Medium cups", endL:"Large cups", endS:"Small cups", endHC:"Hot Coffee cups" };
+          Object.entries(labels).forEach(([k, label]) => {
+            const v = cups[k];
+            if (v !== undefined && v <= low) items.push({ type:"cup", label, remaining: v });
+          });
+        }
+        // OOS flavors
+        const oos = JSON.parse(localStorage.getItem("brewsFlavorOOS") || "[]");
+        oos.forEach(key => {
+          const name = key.startsWith("FT:") ? key.slice(3) : key;
+          if (name) items.push({ type:"flavor", label: name });
+        });
+
+        const panel = document.getElementById("adminNeedsPanel");
+        const body  = document.getElementById("adminNeedsBody");
+        if (!items.length) { panel.style.display = "none"; return; }
+        panel.style.display = "block";
+        body.innerHTML = items.map(item =>
+          item.type === "cup"
+            ? `<div style="display:flex;justify-content:space-between;align-items:center;
+                background:#fff4f0;border:1.5px solid #f0c8b8;border-radius:10px;padding:9px 13px;">
+                <span style="font-size:0.84rem;font-weight:600;color:#5c4631;">⚠ ${item.label}</span>
+                <span style="font-size:0.76rem;font-weight:700;color:#c0665a;">${item.remaining} left</span>
+               </div>`
+            : `<div style="display:flex;justify-content:space-between;align-items:center;
+                background:#fff0f0;border:1.5px solid #f0c0c0;border-radius:10px;padding:9px 13px;">
+                <span style="font-size:0.84rem;font-weight:600;color:#5c4631;">🔴 ${item.label}</span>
+                <span style="font-size:0.72rem;font-weight:700;color:#b05050;">Out of stock</span>
+               </div>`
+        ).join("");
+      } catch(e) { console.warn("loadAdminNeeds:", e); }
     }
 
     function showAdmin() {
@@ -583,8 +638,20 @@
 
     function saveAndCloseSettings() {
       collectFromUI();
+      // Save pairing code if changed
+      const codeEl = document.getElementById("sp_pairingCode");
+      if (codeEl && codeEl.value.trim()) {
+        const code = codeEl.value.trim();
+        localStorage.setItem(CODE_KEY, code);
+        _ws._pairingCode = code;
+      }
       saveSettings(_ws);
       closeSettings();
+      // Push to cloud so employees get updated prices/flavors immediately
+      setSyncUI("busy", "Saving settings to cloud…");
+      syncPush()
+        .then(() => setSyncUI("ok", "Settings pushed " + getLastSyncDisplay()))
+        .catch(e  => setSyncUI("error", "⚠ Push failed — " + (e.message || "check connection")));
     }
 
     function n(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
