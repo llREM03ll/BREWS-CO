@@ -323,6 +323,13 @@ function saveCurrentResults() {
   const editedDate = dateInput?.value || lastRenderDate || new Date().toISOString().split("T")[0];
   saveHistory(editedDate, lastRenderContent);
 
+  // Employee device: push history to cloud immediately
+  if (localStorage.getItem("brewsDeviceRole") === "employee") {
+    if (typeof syncPushHistory === "function") {
+      syncPushHistory().catch(e => console.warn("Auto-push history failed:", e.message));
+    }
+  }
+
   // Save ending cups for carry-over to next shift
   const v = id => +document.getElementById(id)?.value || 0;
   localStorage.setItem("brewsLastEndingCups", JSON.stringify({
