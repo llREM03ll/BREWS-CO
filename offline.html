@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BREWS.CO – Offline</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+  :root { --espresso:#1C0A00; --caramel:#C4813A; --cream:#FDF5E8; --parchment:#F5E4C8; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, var(--parchment), var(--cream));
+    color: var(--espresso); text-align: center; padding: 24px;
+  }
+  .card {
+    max-width: 380px; background: #fff; border-radius: 20px; padding: 36px 28px;
+    box-shadow: 0 10px 30px rgba(28,10,0,0.12);
+  }
+  .icon { font-size: 48px; margin-bottom: 8px; }
+  h1 { font-size: 1.25rem; margin: 8px 0; }
+  p { font-size: 0.95rem; opacity: 0.75; line-height: 1.5; }
+  button {
+    margin-top: 20px; border: none; border-radius: 12px; padding: 12px 24px;
+    background: var(--caramel); color: #fff; font-weight: 600; font-size: 0.95rem; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon" aria-hidden="true">☕</div>
+    <h1>This page hasn't been saved for offline use yet</h1>
+    <p>BREWS.CO works offline for pages you've already visited on this device.
+       Connect to the internet once to load this page, and it'll be available
+       offline afterward.</p>
+    <button onclick="location.href='./index.html'">Go to Home</button>
+  </div>
+</body>
+</html>

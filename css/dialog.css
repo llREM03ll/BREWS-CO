@@ -1,0 +1,61 @@
+/* dialog.css — themed replacement for native alert()/confirm() (see js/ui/dialog.js) */
+.brews-dialog-backdrop {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(28, 10, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: brewsDialogFade .15s ease;
+}
+@keyframes brewsDialogFade { from { opacity: 0; } to { opacity: 1; } }
+
+.brews-dialog {
+  background: var(--grad-card, #fff);
+  border-radius: var(--radius-lg, 18px);
+  padding: 24px 22px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 16px 40px rgba(28, 10, 0, 0.25);
+}
+
+.brews-dialog-msg {
+  margin: 0 0 20px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--espresso, #1C0A00);
+  white-space: pre-line;
+}
+
+.brews-dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.brews-dialog-btn {
+  border: none;
+  border-radius: var(--radius-md, 12px);
+  padding: 10px 18px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px; /* touch target */
+}
+
+.brews-dialog-cancel {
+  background: var(--parchment, #F5E4C8);
+  color: var(--espresso, #1C0A00);
+}
+
+.brews-dialog-ok {
+  background: var(--grad-cta, var(--caramel, #C4813A));
+  color: #fff;
+}
+
+.brews-dialog-ok.brews-dialog-danger {
+  background: #b3261e;
+}
+
+.brews-dialog-btn:focus-visible {
+  outline: 3px solid var(--caramel, #C4813A);
+  outline-offset: 2px;
+}

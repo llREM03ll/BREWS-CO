@@ -206,21 +206,35 @@ function calculate() {
       <tr><th>Item</th><th>Beg</th><th>Cups</th><th>Price</th><th>End</th><th>Amount</th></tr>
   `;
 
+  // Cup key map for delivery lookup in table rows
+  const _tblCupKeyMap = { "Medium":"M", "Large":"L", "Small":"S", "Hot Coffee":"HC",
+                           "Iced Coffee M":"M", "Iced Coffee L":"L" };
+
   let hasNegative = false;
   orderedRows.forEach(({ item, beg, end, dmg }) => {
     if (item.usedCups === 0 && beg === null) return;
     if (item.usedCups < 0) hasNegative = true;
 
+    // Damage annotation — red below, label-free (block below table explains)
     let displayEnd = dash(end);
     if (end !== null) {
       displayEnd = dmg > 0
-        ? `${end - dmg} <span style="font-size:.75em;color:#b08060">(−${dmg} dmg)</span>`
+        ? `${end - dmg}<br><span style="font-size:.70em;color:#c0665a;font-weight:700">−${dmg}</span>`
         : `${end}`;
     }
 
+    // Delivery annotation — green below, label-free
+    const ck     = _tblCupKeyMap[item.name];
+    const delQty = ck ? (del[ck] || 0) : 0;
+    const origB  = (beg !== null && delQty > 0) ? beg - delQty : beg;
+    const displayBeg = beg === null ? "—"
+      : delQty > 0
+        ? `${origB}<br><span style="font-size:.70em;color:#3a7a3a;font-weight:700">+${delQty}</span>`
+        : `${beg}`;
+
     html += `<tr>
       <td>${item.name}</td>
-      <td>${dash(beg)}</td>
+      <td>${displayBeg}</td>
       <td>${warnIfNeg(item.usedCups, item.usedCups)}</td>
       <td>${formatMoney(item.price)}</td>
       <td>${displayEnd}</td>
@@ -289,6 +303,10 @@ function calculate() {
   </table>`;
 
   lastRenderContent = html;
+  // Capture deliveries for receipt annotation (set by main.js after shift end)
+  const origBegs    = window._shiftOrigBegs    || {};
+  const deliveries  = window._shiftDeliveries  || {M:v("deliveredM"),L:v("deliveredL"),S:v("deliveredS"),HC:v("deliveredHC")};
+
   lastRenderData = {
     date:         existingDate,
     rows:         orderedRows.filter(r => !(r.item.usedCups === 0 && r.beg === null)),
@@ -296,6 +314,7 @@ function calculate() {
     expenses:     system.expensesList,
     addons:       system.addons,
     dmg, del,
+    origBegs, deliveries,
     shiftDuration: (() => {
       try {
         const s = JSON.parse(localStorage.getItem("brewsPOSState") || "{}");
@@ -317,18 +336,11 @@ function calculate() {
 
 // ── Save to history ───────────────────────────────────────────────────────────
 
-function saveCurrentResults() {
-  if (!lastRenderContent) { alert("Please compute first."); return; }
+async function saveCurrentResults() {
+  if (!lastRenderContent) { await BrewsDialog.alert("Please compute first."); return; }
   const dateInput  = document.getElementById("resultDate");
   const editedDate = dateInput?.value || lastRenderDate || new Date().toISOString().split("T")[0];
   saveHistory(editedDate, lastRenderContent);
-
-  // Employee device: push history to cloud immediately
-  if (localStorage.getItem("brewsDeviceRole") === "employee") {
-    if (typeof syncPushHistory === "function") {
-      syncPushHistory().catch(e => console.warn("Auto-push history failed:", e.message));
-    }
-  }
 
   // Save ending cups for carry-over to next shift
   const v = id => +document.getElementById(id)?.value || 0;
@@ -342,12 +354,54 @@ function saveCurrentResults() {
     btn.disabled = true; btn.textContent = "Saved ✓";
     btn.style.opacity = "0.65"; btn.style.cursor = "default";
   }
+
+  // Auto-push to cloud immediately after saving (workers only)
+  _autoPushAfterSave();
+}
+
+// ── Auto-push toast helpers ───────────────────────────────────────────────────
+async function _autoPushAfterSave() {
+  // Skip if sync functions are not available or this is a manager device
+  if (typeof syncPush !== "function") return;
+  if (typeof getDeviceRole === "function" && getDeviceRole() === "manager") return;
+
+  _showSyncToast("☁️ Syncing to cloud…", "#7a5c3e", false);
+  try {
+    await syncPush();
+    _showSyncToast("✓ Saved & synced to cloud", "#3a7a3a", true);
+  } catch (e) {
+    _showSyncToast("⚠ Saved locally — sync failed", "#c0665a", true);
+  }
+}
+
+function _showSyncToast(msg, color, autoDismiss) {
+  let toast = document.getElementById("_brewsSyncToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "_brewsSyncToast";
+    toast.style.cssText = [
+      "position:fixed","bottom:80px","left:50%","transform:translateX(-50%)",
+      "padding:9px 20px","border-radius:20px","font-size:0.82rem","font-weight:600",
+      "color:#fff","z-index:9999","opacity:0","transition:opacity .3s",
+      "white-space:nowrap","box-shadow:0 3px 14px rgba(0,0,0,0.22)",
+      "pointer-events:none"
+    ].join(";");
+    document.body.appendChild(toast);
+  }
+  clearTimeout(toast._timer);
+  toast.textContent   = msg;
+  toast.style.background = color;
+  toast.style.opacity = "1";
+  if (autoDismiss) {
+    toast._timer = setTimeout(() => { toast.style.opacity = "0"; }, 3000);
+  }
 }
 
 // ── Clear all ─────────────────────────────────────────────────────────────────
 
-function clearAll() {
-  if (!confirm("Clear all inputs and results?")) return;
+async function clearAll() {
+  const ok = await BrewsDialog.confirm("Clear all inputs and results?", { okLabel: "Clear", danger: true });
+  if (!ok) return;
   document.querySelectorAll("input").forEach(i => { if (!i.disabled) i.value = ""; });
   document.getElementById("results").innerHTML           = "";
   document.getElementById("expensesContainer").innerHTML = "";
@@ -360,9 +414,9 @@ function clearAll() {
 
 // ── Print Receipt as Image ────────────────────────────────────────────────────
 
-function printReceipt() {
-  if (!lastRenderData) { alert("Please compute first."); return; }
-  if (typeof html2canvas === "undefined") { alert("Image library not loaded. Refresh and try again."); return; }
+async function printReceipt() {
+  if (!lastRenderData) { await BrewsDialog.alert("Please compute first."); return; }
+  if (typeof html2canvas === "undefined") { await BrewsDialog.alert("Image library not loaded. Refresh and try again."); return; }
 
   const d = lastRenderData;
 
@@ -375,15 +429,29 @@ function printReceipt() {
   // ── Build receipt rows HTML ───────────────────────────────────────────────
   const fmtR = v => "₱" + Number(v||0).toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2});
 
+  // Map item name → cup key for delivery annotation lookup
+  const _cupKeyMap = { "Medium":"M", "Large":"L", "Small":"S", "Hot Coffee":"HC",
+                       "Iced Coffee M":"M", "Iced Coffee L":"L" };
+
   const cupRows = d.rows.map(({ item, beg, end, dmg }) => {
     const endTxt = end === null ? "—"
-      : dmg > 0 ? `${end}<span style="color:#b08060;font-size:.78em"> (−${dmg})</span>`
+      : dmg > 0 ? `${end}<br><span style="color:#c0665a;font-weight:700;font-size:.7em">−${dmg}</span>`
       : `${end}`;
     const neg = item.usedCups < 0;
+
+    // Delivery annotation — below number, green, no label (block below explains)
+    const cupKey  = _cupKeyMap[item.name];
+    const delQty  = (d.deliveries || {})[cupKey] || 0;
+    const origBeg = beg === null ? null : ((d.origBegs || {})[cupKey] ?? beg);
+    const begDisplay = beg === null ? "—"
+      : delQty > 0
+        ? `${origBeg}<br><span style="font-size:.7em;color:#3a7a3a;font-weight:700">+${delQty}</span>`
+        : `${beg}`;
+
     return `
       <tr>
         <td style="text-align:left;padding:6px 8px;color:${neg?"#c0665a":"#3d2b1a"};border-bottom:1px solid #f0e4d8;word-break:break-word;">${item.name}</td>
-        <td style="text-align:center;padding:6px 4px;color:#7a5c3e;border-bottom:1px solid #f0e4d8;">${beg === null ? "—" : beg}</td>
+        <td style="text-align:center;padding:6px 4px;color:#7a5c3e;border-bottom:1px solid #f0e4d8;line-height:1.3;">${begDisplay}</td>
         <td style="text-align:center;padding:6px 4px;color:${neg?"#c0665a":"#3d2b1a"};font-weight:${neg?700:400};border-bottom:1px solid #f0e4d8;">${item.usedCups}${neg?" ⚠":""}</td>
         <td style="text-align:center;padding:6px 4px;color:#9a7a5e;border-bottom:1px solid #f0e4d8;">${fmtR(item.price)}</td>
         <td style="text-align:center;padding:6px 4px;border-bottom:1px solid #f0e4d8;">${endTxt}</td>
@@ -419,7 +487,7 @@ function printReceipt() {
   el.style.cssText = `
     position:fixed; left:-9999px; top:0;
     width:480px; background:#fffaf5;
-    font-family:"Inter","Segoe UI",sans-serif;
+    font-family:"Plus Jakarta Sans","Segoe UI",sans-serif;
     padding:36px 32px 40px; box-sizing:border-box;
     color:#3d2b1a;
   `;
@@ -472,10 +540,6 @@ function printReceipt() {
 
     <!-- Breakdown -->
     <table style="width:100%;border-collapse:collapse;font-size:0.84rem;">
-      <tr style="border-bottom:1px solid #e8d5c4;">
-        <td style="padding:6px 8px;color:#3d2b1a;font-weight:700;">Total Cup Sales</td>
-        <td style="text-align:right;padding:6px 8px;color:#3d2b1a;font-weight:700;">${fmtR(d.totalSales)}</td>
-      </tr>
       <tr style="border-bottom:1px solid #e8d5c4;">
         <td style="padding:6px 8px;color:#3d2b1a;font-weight:700;">Total Expenses:</td>
         <td style="text-align:right;padding:6px 8px;color:#3d2b1a;font-weight:700;">− ${fmtR(d.salary + d.expenses.reduce((s,e)=>s+e.price,0))}</td>
@@ -566,7 +630,7 @@ function printReceipt() {
       link.click();
     }).catch(() => {
       if (document.body.contains(el)) document.body.removeChild(el);
-      alert("Could not save image. Try again.");
+      BrewsDialog.alert("Could not save image. Try again.");
     });
 }
 

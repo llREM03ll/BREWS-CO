@@ -9,9 +9,15 @@
   <meta name="theme-color" content="#6b4f36" />
   <title>BREWS.CO – Calculate</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/dialog.css">
+  <script src="js/theme.js"></script>
+  <script src="js/data/store.js"></script>
+  <script src="js/ui/dialog.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/header.js"></script>
   <style>
     .damage-note {
-      font-size: 0.68rem; color: #b08060; font-weight: 500;
+      font-size: 0.68rem; color: var(--dust); font-weight: 500;
       margin-left: 6px; font-style: italic; text-transform: none; letter-spacing: 0;
     }
     .del-dmg-header {
@@ -19,29 +25,34 @@
       gap: 8px; margin-bottom: 4px;
     }
     .del-dmg-header span {
-      font-size: 0.68rem; font-weight: 700; color: #b08060;
+      font-size: 0.68rem; font-weight: 700; color: var(--dust);
       letter-spacing: 0.07em; text-transform: uppercase; text-align: center;
     }
     .del-dmg-header span:first-child { text-align: left; }
     .carryover-btn {
       display: flex; align-items: center; gap: 7px; width: 100%;
-      background: #f0f7f0; border: 1.5px solid #b8ddb8; border-radius: 11px;
-      padding: 11px 14px; font-size: 0.84rem; font-weight: 700; color: #3a7a3a;
-      font-family: inherit; cursor: pointer; margin-bottom: 10px; transition: all .18s;
+      background: var(--success-bg); border: 1.5px solid var(--success-border); border-radius: var(--radius-md);
+      padding: 11px 14px; font-size: 0.84rem; font-weight: 700; color: var(--success-dark);
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; margin-bottom: 10px; transition: all .18s;
     }
-    .carryover-btn:hover { background: #e0f0e0; border-color: #8aba8a; transform: translateY(-1px); }
-    .carryover-meta { font-size: 0.7rem; color: #7ab87a; font-weight: 500; margin-left: auto; }
+    .carryover-btn:hover { background: var(--success-bg-soft); border-color: var(--success-hover-border); transform: translateY(-1px); }
+    .carryover-meta { font-size: 0.7rem; color: var(--success-mid); font-weight: 500; margin-left: auto; }
     @media (max-width: 600px) {
       .del-dmg-header { display: none; }
     }
   </style>
 </head>
 <body class="has-bottom-nav">
+<script>
+  if ((localStorage.getItem("brewsDeviceRole") || "worker") === "manager") {
+    window.location.replace("index.html");
+  }
+</script>
   <div class="container">
-    <a href="index.html" style="text-decoration:none;">
-      <div class="brand">BREWS.CO</div>
-      <div class="brand-sub">Calculate</div>
-    </a>
+    <div id="calcHeaderRoot"></div>
+    <script>
+      document.getElementById("calcHeaderRoot").innerHTML = renderPageHeader({ subtitle: "Calculate" });
+    </script>
 
     <div id="carryoverWrap" style="display:none;">
       <button class="carryover-btn" onclick="useYesterdaysEnding()">
@@ -96,7 +107,7 @@
 
       <!-- Free-text other needs -->
       <div>
-        <div style="font-size:0.7rem;font-weight:700;color:#9a7a5e;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px;">Other Needs</div>
+        <div style="font-size:0.7rem;font-weight:700;color:var(--bark);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px;">Other Needs</div>
         <div id="needsContainer"></div>
         <button type="button" class="add-expense-btn" onclick="addNeedRow()">+ Add Item</button>
       </div>
@@ -112,20 +123,7 @@
     </div>
   </div>
 
-  <nav class="bottom-nav">
-    <a href="calculate.html" class="bottom-nav-item active">
-      <span class="bottom-nav-icon">🧮</span>
-      <span class="bottom-nav-label">Calculate</span>
-    </a>
-    <a href="pos.html" class="bottom-nav-item bottom-nav-shift" id="shiftNavBtn">
-      <span class="bottom-nav-shift-pill">🧋</span>
-      <span class="bottom-nav-label" id="shiftNavLabel">Shift</span>
-    </a>
-    <a href="calendar.html" class="bottom-nav-item">
-      <span class="bottom-nav-icon">📅</span>
-      <span class="bottom-nav-label">History</span>
-    </a>
-  </nav>
+  <script>document.write(renderBottomNav("calculate"));</script>
 
   <script>
     // Clamp all number inputs to 0+
@@ -162,7 +160,7 @@
             if (!el) return;
             el.value = val;
             el.style.transition = "background .4s";
-            el.style.background = "#e6f5e6";
+            el.style.background = "var(--success-bg-alt)";
             setTimeout(() => el.style.background = "", 900);
           });
           if (typeof saveInputs === "function") saveInputs();
@@ -171,13 +169,9 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script>
-    // Stub so ui.js doesn't crash if sync.js fails to load
-    window.syncPushHistory = async function(){ console.warn("syncPushHistory not loaded"); };
-  </script>
-  <script src="js/sync.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
   <script src="js/settings.js"></script>
   <script>
     if (typeof getSettings !== "function") {
@@ -193,10 +187,15 @@
       window.resetSettings= () => {};
     }
   </script>
+  <script>
+    if (typeof window.syncPush      !== "function") window.syncPush      = async () => { throw new Error("Sync unavailable"); };
+  </script>
+  <script src="js/sync.js" onerror="console.warn('sync.js not found')"></script>
   <script src="js/InventorySystem.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/history.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
+<script src="js/ui/sw-register.js"></script>
 </body>
 </html>
