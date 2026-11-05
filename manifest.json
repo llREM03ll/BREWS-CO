@@ -1,10 +1,7 @@
 {
-  "id": "/index.html",
   "name": "BREWS.CO Inventory System",
   "short_name": "BREWS.CO",
-  "description": "Daily shift, inventory, and sales tools for BREWS.CO.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f5eee6",
   "theme_color": "#6b4f36",
@@ -20,28 +17,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "icon-512-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
-  "shortcuts": [
-    {
-      "name": "New Shift",
-      "short_name": "Shift",
-      "description": "Start or resume today's POS shift",
-      "url": "./pos.html",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "History",
-      "short_name": "History",
-      "description": "View past shifts and sales history",
-      "url": "./calendar.html",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
-    }
+  "id": "./",
+  "scope": "./",
+  "description": "Inventory, point of sale and daily reports for BREWS.CO",
+  "orientation": "portrait",
+  "categories": [
+    "business",
+    "productivity"
   ]
 }

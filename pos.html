@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -9,32 +10,752 @@
   <meta name="theme-color" content="#6b4f36" />
   <title>BREWS.CO – POS</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <link rel="stylesheet" href="css/dialog.css">
+  <script src="js/util.js"></script>
   <script src="js/theme.js"></script>
-  <script src="js/data/store.js"></script>
-  <script src="js/ui/dialog.js"></script>
+  <script src="js/appstyle.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/header.js"></script>
-  <link rel="stylesheet" href="css/pos.css">
+  <script src="js/menu.js"></script>
+  <style>
+    body { align-items: flex-start; padding: 0; }
+
+    /* ── Carryover button ── */
+    .carryover-btn {
+      display: flex; align-items: center; gap: 7px; width: 100%;
+      background: var(--success-bg); border: 1.5px solid var(--success-border); border-radius: var(--radius-md);
+      padding: 11px 14px; font-size: 0.84rem; font-weight: 700; color: var(--success-dark);
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; margin-bottom: 12px; transition: all .18s;
+    }
+    .carryover-btn:hover { background: var(--success-bg-soft); border-color: var(--success-hover-border); transform: translateY(-1px); }
+    .carryover-meta { font-size: 0.7rem; color: var(--success-mid); font-weight: 500; margin-left: auto; }
+
+    /* ── Setup cup stack ── */
+    .beg-cups-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+    .beg-cup-card {
+      background: var(--pearl); border: 1.5px solid var(--latte); border-radius: var(--radius-lg);
+      padding: 14px 16px; transition: border-color .16s;
+    }
+    .beg-cup-card:focus-within { border-color: var(--clay); background: var(--white); }
+    .beg-cup-name {
+      font-size: 0.7rem; font-weight: 700; color: var(--dust);
+      letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .beg-cup-card input {
+      width: 100%; border: none; background: transparent;
+      font-size: 1.35rem; font-weight: 700; padding: 0;
+      color: var(--espresso); font-family: "Plus Jakarta Sans", sans-serif;
+    }
+    .beg-cup-card input:focus { outline: none; box-shadow: none; }
+    .beg-cup-card input::placeholder { color: var(--mochaccino); font-weight: 400; font-size: 1.1rem; }
+
+    /* ═══════════════════════ SETUP ═══════════════════════ */
+    #setupScreen { padding: 20px 12px; width: 100%; display: flex; justify-content: center; }
+    #setupScreen .container { max-width: 720px; }
+    .setup-note {
+      background: #fdf0e4; border: 1.5px solid var(--latte); border-radius: var(--radius-lg);
+      padding: 12px 14px; font-size: 0.84rem; color: var(--bark);
+      margin-bottom: 20px; line-height: 1.55;
+    }
+    .start-btn {
+      width: 100%; padding: 13px;
+      background: var(--grad-cta);
+      color: var(--white); border: none; border-radius: var(--radius-lg); font-size: 0.92rem;
+      font-weight: 700; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      box-shadow: 0 3px 12px rgba(107,61,30,0.28); transition: all .18s;
+    }
+    .start-btn:hover  { background: var(--grad-cta); transform: translateY(-1px); }
+    .start-btn:active { transform: scale(0.98); }
+
+    /* ═══════════════════════ POS SCREEN ═══════════════════════ */
+    #posScreen { display: none; flex-direction: column; width: 100%; min-height: 100vh; }
+
+    /* ── Header ── */
+    .pos-header {
+      background: var(--grad-dark);
+      padding: 10px 14px 8px; display: flex; flex-direction: column; gap: 5px;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 12px rgba(30,18,8,0.28);
+    }
+    .pos-header-row1 { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .pos-header-row2 { display: flex; align-items: center; gap: 6px; width: 100%; }
+        .pos-header-left { display: flex; flex-direction: column; }
+    .pos-header-brand { font-size: 1rem; font-weight: 800; color: var(--white); letter-spacing: 0.1em; }
+    .pos-header-meta  { font-size: 0.68rem; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; margin-top: 1px; display: flex; gap: 6px; }
+    .pos-clock        { font-variant-numeric: tabular-nums; }
+    .header-stat {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+      border-radius: var(--radius-md); padding: 6px 11px; text-align: right;
+    }
+    .header-stat-label { font-size: 0.6rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.08em; display: block; }
+    .header-stat-val   { font-size: 0.92rem; font-weight: 700; color: var(--white); font-variant-numeric: tabular-nums; }
+    .end-shift-btn {
+      background: rgba(210,70,70,0.24); border: 1.5px solid rgba(255,120,120,0.5);
+      border-radius: var(--radius-md); padding: 8px 16px; color: var(--white); font-weight: 700;
+      font-size: 0.82rem; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; transition: all .2s;
+      white-space: nowrap;
+    }
+    .end-shift-btn:hover { background: rgba(210,70,70,0.42); }
+
+    /* ── POS Body ── */
+    .pos-body {
+      display: flex; flex-direction: column; flex: 1;
+      padding: 12px; gap: 12px; max-width: 600px; width: 100%; margin: 0 auto;
+    }
+
+    /* ── Drink Grid ── */
+    .drinks-section-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--dust);
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 0 2px 4px;
+    }
+    .drinks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 4px; }
+
+    .drink-btn {
+      position: relative; background: var(--cream); border: 2px solid var(--latte);
+      border-radius: var(--radius-lg); padding: 10px 6px 8px; display: flex;
+      flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer;
+      font-family: "Plus Jakarta Sans", sans-serif; transition: all .14s;
+      box-shadow: 0 2px 5px rgba(107,61,30,0.06);
+      -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+      height: 116px; overflow: hidden;
+    }
+    .drink-btn:active { transform: scale(0.92); }
+    .drink-btn.has-qty { border-color: var(--clay); background: var(--sand-alt); box-shadow: 0 3px 10px rgba(107,61,30,0.13); }
+    .drink-btn.low-stock { border-color: #e8b87a; background: #fff8f0; }
+    .drink-btn.out-stock { border-color: #e8a0a0; background: #fff4f4; opacity: 0.6; cursor: not-allowed; }
+    .drink-btn.fruit-tea { border-style: dashed; }
+    .drink-btn.fruit-tea.has-qty { border-style: solid; }
+
+    .drink-btn-icon  { font-size: 1.4rem; line-height: 1; }
+    .drink-btn-code  { font-size: 0.76rem; font-weight: 800; color: var(--mahogany); letter-spacing: 0.05em; }
+    .drink-btn-name  {
+      font-size: 0.62rem; color: var(--bark); text-align: center; line-height: 1.2;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .drink-btn-price { font-size: 0.7rem; font-weight: 700; color: var(--roast); margin-top: 1px; }
+    .stock-pill {
+      font-size: 0.58rem; font-weight: 700; padding: 1px 5px; border-radius: var(--radius-pill);
+      margin-top: 2px; background: var(--sand); color: var(--bark); letter-spacing: 0.03em;
+    }
+    .drink-btn.low-stock .stock-pill { background: #fde8c8; color: #b06820; }
+    .drink-btn.out-stock .stock-pill { background: #fdd8d8; color: #b04040; }
+    .qty-badge {
+      position: absolute; top: -7px; right: -7px;
+      background: var(--grad-cta);
+      color: var(--white); font-size: 0.68rem; font-weight: 800;
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(107,61,30,0.35);
+      opacity: 0; transform: scale(0.4); transition: all .16s;
+    }
+    .drink-btn.has-qty .qty-badge { opacity: 1; transform: scale(1); }
+    @keyframes popBadge { 0%{transform:scale(1)} 40%{transform:scale(1.4)} 100%{transform:scale(1)} }
+    .qty-badge.pop { animation: popBadge .22s ease; }
+
+    /* ── Order Panel ── */
+    .order-panel {
+      background: var(--cream); border: 1.5px solid var(--latte);
+      border-radius: 18px; overflow: hidden; box-shadow: 0 2px 8px rgba(107,61,30,0.07);
+    }
+    .order-panel-header {
+      background: var(--parchment); padding: 9px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--latte);
+    }
+    .order-panel-title { font-size: 0.75rem; font-weight: 700; color: var(--bark); letter-spacing: 0.09em; text-transform: uppercase; }
+    .order-panel-actions { display: flex; gap: 6px; }
+    .undo-btn {
+      background: none; border: none; font-size: 0.72rem; color: var(--mahogany);
+      font-weight: 600; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      padding: 2px 7px; border-radius: 6px; transition: background .15s; display: none;
+    }
+    .undo-btn.visible { display: inline; }
+    .undo-btn:hover { background: var(--sand); }
+    .clear-order-btn {
+      background: none; border: none; font-size: 0.72rem; color: var(--danger-soft);
+      font-weight: 600; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      padding: 2px 7px; border-radius: 6px; transition: background .15s;
+    }
+    .clear-order-btn:hover { background: var(--danger-bg-hover); }
+
+    .order-items { padding: 4px 14px; min-height: 50px; max-height: 280px; overflow-y: auto; }
+    .empty-order { text-align: center; color: var(--mochaccino); font-size: 0.82rem; padding: 10px 0; }
+
+    .order-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 0; border-bottom: 1px solid var(--parchment);
+      animation: slideIn .15s ease;
+    }
+    .order-item:last-child { border-bottom: none; }
+    @keyframes slideIn { from{opacity:0;transform:translateX(-5px)} to{opacity:1;transform:none} }
+
+    .order-item-info  { flex: 1; }
+    .order-item-name  { font-size: 0.84rem; color: var(--roast); font-weight: 600; line-height: 1.2; }
+    .order-item-flavor { font-size: 0.72rem; color: var(--bark); }
+    .order-item-qty-controls { display: flex; align-items: center; gap: 4px; }
+    .qty-btn {
+      width: 26px; height: 26px; border-radius: 8px; border: 1.5px solid var(--sand-border);
+      background: var(--parchment); color: var(--mahogany); font-weight: 800; font-size: 0.95rem;
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; transition: all .12s; -webkit-tap-highlight-color: transparent;
+    }
+    .qty-btn:hover  { background: var(--sand-hover); }
+    .qty-btn:active { transform: scale(0.88); }
+    .order-item-qty   { font-size: 0.88rem; font-weight: 700; color: var(--roast); min-width: 22px; text-align: center; }
+    .order-item-total { font-size: 0.84rem; font-weight: 600; color: var(--mahogany); min-width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* ── Per-item add-ons (item add-on modal) ── */
+    .addon-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .addon-pill {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      background: var(--pearl); border: 1.5px solid var(--latte); border-radius: var(--radius-md);
+      padding: 6px 5px; font-size: 0.76rem; font-weight: 600; color: var(--mahogany);
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; transition: all .14s;
+      -webkit-tap-highlight-color: transparent; text-align: center; overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+    .addon-pill:hover  { background: var(--parchment); border-color: var(--clay); }
+    .addon-pill:active { transform: scale(0.93); }
+    .addon-pill.active { background: var(--sand-alt); border-color: var(--clay); color: var(--roast); }
+    .addon-pill-qty {
+      background: var(--grad-cta); color: var(--white);
+      border-radius: var(--radius-md); padding: 1px 6px; font-size: 0.68rem; font-weight: 800;
+    }
+
+    /* ── Per-item add-ons (order panel) ── */
+    .order-item-info { cursor: pointer; }
+    .order-item-addons {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px;
+    }
+    .addon-chip {
+      background: var(--sand-alt); border: 1px solid var(--sand-border); color: var(--mahogany);
+      font-size: 0.66rem; font-weight: 700; padding: 1px 7px; border-radius: var(--radius-pill);
+    }
+    .order-item-addons.muted {
+      font-size: 0.68rem; color: var(--dust); font-weight: 600; opacity: 0.75;
+    }
+
+    /* ── Paid Online (GCash) toggle ── */
+    .paid-online-btn {
+      background: var(--parchment); border: 1.5px solid var(--sand-border); border-radius: var(--radius-md);
+      padding: 7px 12px; font-size: 0.78rem; font-weight: 700; color: var(--mahogany);
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; transition: all .15s;
+      -webkit-tap-highlight-color: transparent; width: 100%;
+    }
+    .paid-online-btn.active { background: var(--info-bg); border-color: var(--info-border); color: var(--info); }
+    .paid-online-btn:active { transform: scale(0.98); }
+    .paid-online-btn.small { width: auto; padding: 4px 10px; font-size: 0.7rem; }
+    .void-order-btn {
+      background: #fbeaea; border: 1.5px solid #e0a8a8; border-radius: var(--radius-md);
+      padding: 4px 10px; font-size: 0.7rem; font-weight: 700; color: #a03030;
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .void-order-btn:active { transform: scale(0.95); background: #f5d5d5; }
+
+    /* ── Auto-synced expense row (Paid Online / GCash) ── */
+    .expense-row.auto-expense input {
+      background: #f0f5fb; color: var(--info); font-weight: 700; pointer-events: none;
+    }
+    .expense-row.auto-expense .exp-auto-tag {
+      font-size: 0.62rem; color: #5a86bd; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* ── Change calculator ── */
+    .change-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px; border-top: 1px solid var(--sand); background: var(--pearl);
+    }
+    .change-label { font-size: 0.78rem; color: var(--mahogany); font-weight: 600; white-space: nowrap; }
+    .change-input {
+      flex: 1; padding: 7px 10px; border: 1.5px solid var(--sand-border); border-radius: 9px;
+      font-size: 0.88rem; font-family: "Plus Jakarta Sans", sans-serif; background: var(--white); color: var(--espresso);
+      min-width: 0;
+    }
+    .change-input:focus { outline: none; border-color: var(--clay); }
+    .change-display {
+      font-size: 0.88rem; font-weight: 700; color: var(--roast);
+      min-width: 80px; text-align: right; font-variant-numeric: tabular-nums;
+    }
+    .change-display.negative { color: var(--danger-soft); }
+
+    /* ── Order footer ── */
+    .order-footer { padding: 10px 14px 13px; border-top: 1.5px solid var(--latte); background: var(--pearl); }
+    .order-subtotal { display: flex; justify-content: space-between; font-size: 1rem; font-weight: 700; color: var(--roast); margin-bottom: 9px; }
+    .place-order-btn {
+      width: 100%; padding: 13px;
+      background: var(--grad-cta);
+      color: var(--white); border: none; border-radius: var(--radius-lg); font-size: 0.95rem;
+      font-weight: 700; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      box-shadow: var(--shadow-btn); transition: all .18s;
+    }
+    .place-order-btn:hover    { background: var(--grad-cta); transform: translateY(-1px); }
+    .place-order-btn:active   { transform: scale(0.98); }
+    .place-order-btn:disabled { opacity: 0.38; cursor: default; transform: none; box-shadow: none; }
+
+    /* ── POS Expenses ── */
+    .pos-expenses-panel {
+      background: var(--cream); border: 1.5px solid var(--latte); border-radius: 16px; overflow: hidden;
+    }
+    .pos-expenses-header {
+      background: var(--parchment); padding: 9px 14px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--latte); cursor: pointer;
+    }
+    .pos-expenses-title { font-size: 0.75rem; font-weight: 700; color: var(--bark); letter-spacing: 0.09em; text-transform: uppercase; }
+    .pos-expenses-toggle { font-size: 0.7rem; color: var(--dust); transition: transform .2s; }
+    .pos-expenses-toggle.open { transform: rotate(180deg); }
+    .pos-expenses-body { padding: 10px 14px 12px; display: none; }
+    .pos-expenses-body.open { display: block; }
+
+    /* ── Orders Log ── */
+    .orders-log { display: flex; flex-direction: column; gap: 8px; padding-bottom: 24px; }
+    .orders-log-header {
+      font-size: 0.74rem; font-weight: 700; color: var(--bark);
+      letter-spacing: 0.1em; text-transform: uppercase; padding: 0 2px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .orders-count-badge {
+      background: var(--sand); color: var(--mahogany); border-radius: var(--radius-pill);
+      padding: 2px 9px; font-size: 0.7rem; font-weight: 700; transition: transform .2s;
+    }
+    @keyframes pulseBadge { 0%{transform:scale(1)} 50%{transform:scale(1.28)} 100%{transform:scale(1)} }
+    .orders-count-badge.pulse { animation: pulseBadge .25s ease; }
+    .order-log-item {
+      background: var(--cream); border: 1.5px solid var(--latte); border-radius: var(--radius-lg);
+      overflow: hidden; box-shadow: 0 1px 4px rgba(107,61,30,0.05);
+      cursor: pointer; transition: all .15s; animation: slideIn .2s ease;
+    }
+    .order-log-item:hover { border-color: var(--mochaccino); box-shadow: 0 3px 8px rgba(107,61,30,0.1); }
+    .order-log-summary { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; }
+    .order-log-left  { display: flex; flex-direction: column; gap: 2px; }
+    .order-log-num   { font-size: 0.78rem; font-weight: 700; color: var(--mahogany); }
+    .order-log-desc  { font-size: 0.72rem; color: var(--bark); }
+    .order-log-right { display: flex; align-items: center; gap: 6px; }
+    .order-log-total { font-size: 0.9rem; font-weight: 700; color: var(--roast); font-variant-numeric: tabular-nums; }
+    .order-log-chevron { font-size: 0.6rem; color: var(--mochaccino); transition: transform .2s; display: inline-block; }
+    .order-log-item.expanded .order-log-chevron { transform: rotate(180deg); }
+    .order-log-detail { border-top: 1px solid var(--sand); padding: 10px 14px; display: none; }
+    .order-log-item.expanded .order-log-detail { display: block; }
+    .order-log-detail-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--mahogany); padding: 3px 0; }
+    .order-log-detail-row.sub { color: var(--bark); font-size: 0.75rem; padding-left: 10px; }
+    .no-orders { text-align: center; color: var(--mochaccino); font-size: 0.85rem; padding: 14px 0; }
+
+    /* ═══════════════════════ FLAVOR MODAL ═══════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(50,30,12,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 1000; padding: 0 0 70px;          /* 70px lifts sheet above bottom nav */
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--cream); width: 100%; max-width: 600px;
+      border-radius: var(--radius-pill) 20px 0 0; padding: 0;
+      max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 -8px 40px rgba(90,56,24,0.25); border-top: 1px solid var(--latte);
+      transform: translateY(20px); transition: transform .22s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    /* Center modals that aren't bottom-sheet */
+    .modal-overlay.centered { align-items: center; padding: 20px; }
+    .modal-overlay.centered .modal {
+      border-radius: var(--radius-pill); max-width: 420px;
+      transform: translateY(16px) scale(0.97);
+    }
+    .modal-overlay.centered.open .modal { transform: translateY(0) scale(1); }
+
+    .modal-handle {
+      width: 36px; height: 4px; background: var(--mochaccino); border-radius: 2px;
+      margin: 10px auto 0; flex-shrink: 0;
+    }
+
+    .modal-header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px 10px; border-bottom: 1px solid var(--latte); flex-shrink: 0;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--roast); }
+    .modal-sub   { font-size: 0.75rem; color: var(--bark); margin-top: 2px; }
+    .modal-cancel-btn {
+      background: var(--sand); border: 1.5px solid var(--sand-border); border-radius: 9px;
+      padding: 7px 13px; font-weight: 600; font-size: 0.82rem; color: var(--mahogany);
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; flex-shrink: 0;
+    }
+
+    /* Flavor grid */
+    .flavor-scroll { overflow-y: auto; padding: 12px 16px 24px; flex: 1; }
+    .flavor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .flavor-btn {
+      background: var(--pearl); border: 1.5px solid var(--latte); border-radius: var(--radius-md);
+      font-size: 0.76rem; font-weight: 600; color: var(--roast);
+      text-align: center; cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif;
+      transition: all .14s; line-height: 1.25;
+      -webkit-tap-highlight-color: transparent;
+      aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center;
+      padding: 6px 5px; overflow: hidden;
+    }
+    .flavor-btn-label {
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden; word-break: break-word;
+    }
+    .flavor-btn { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    .flavor-btn:hover  { background: var(--parchment); border-color: var(--clay); }
+    .flavor-btn:active { transform: scale(0.93); }
+    .flavor-btn.no-flavor {
+      background: var(--sand); color: var(--bark); font-style: italic;
+      grid-column: 1 / -1; aspect-ratio: auto; padding: 10px;
+    }
+    .flavor-btn.selected {
+      background: #fdf0e0; border-color: var(--clay); color: var(--roast);
+    }
+    .flavor-count {
+      display: inline-block; background: var(--grad-cta);
+      color: var(--white); font-size: 0.65rem; font-weight: 800; font-style: normal;
+      border-radius: var(--radius-md); padding: 1px 6px; margin-left: 4px; vertical-align: middle;
+    }
+    .flavor-search-wrap { padding: 8px 18px 0; flex-shrink: 0; }
+    .flavor-search-input {
+      width: 100%; box-sizing: border-box; background: var(--pearl); border: 1.5px solid var(--latte);
+      border-radius: var(--radius-md); padding: 9px 12px; font-size: 0.86rem; color: var(--roast);
+      font-family: "Plus Jakarta Sans", sans-serif;
+    }
+    .flavor-search-input:focus { outline: none; border-color: var(--clay); }
+    .flavor-empty-msg { text-align: center; color: var(--dust); font-size: 0.82rem; padding: 24px 10px; grid-column: 1 / -1; }
+    .flavor-modal-footer {
+      flex-shrink: 0; padding: 10px 18px calc(14px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--latte); background: var(--pearl);
+    }
+    .flavor-modal-done-btn {
+      display: block; width: 100%; padding: 13px; border: none; border-radius: var(--radius-lg);
+      background: var(--grad-cta); color: var(--white); font-weight: 700; font-size: 0.92rem;
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+    }
+    .flavor-modal-done-btn:active { transform: scale(0.97); }
+
+    /* ═══════════════════════ RECEIPT MODAL ═══════════════════════ */
+    .receipt-modal .modal {
+      max-width: 360px; border-radius: var(--radius-pill); padding: 22px;
+      max-height: 85vh; overflow-y: auto;
+    }
+    .receipt-header { text-align: center; margin-bottom: 12px; }
+    .receipt-brand  { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.12em; color: var(--mahogany); }
+    .receipt-meta   { font-size: 0.68rem; color: var(--dust); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+    .receipt-ordernum { font-size: 0.72rem; color: var(--dust); margin-top: 5px; }
+    .modal-divider { border: none; border-top: 1px dashed var(--mochaccino); margin: 10px 0; }
+    .receipt-row { display: flex; justify-content: space-between; font-size: 0.86rem; color: var(--roast); padding: 3px 0; }
+    .receipt-row.flavor-sub { padding-left: 10px; color: var(--bark); font-size: 0.76rem; }
+    .receipt-row.addon-row  { color: var(--mahogany); }
+    .receipt-total-row { display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: 800; color: var(--espresso); padding: 6px 0 2px; }
+    .receipt-progress { height: 3px; background: var(--sand); border-radius: 2px; margin: 12px 0 8px; overflow: hidden; }
+    .receipt-progress-bar { height: 100%; background: linear-gradient(90deg, var(--clay-light), var(--mahogany)); border-radius: 2px; width: 100%; transition: width linear; }
+    .modal-close-btn {
+      width: 100%; padding: 12px; background: var(--grad-cta);
+      color: var(--white); border: none; border-radius: var(--radius-lg); font-size: 0.9rem; font-weight: 700;
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; transition: all .18s;
+    }
+    .modal-close-btn:hover { background: var(--grad-cta); }
+
+    /* ═══════════════════════ END SHIFT MODAL ═══════════════════════ */
+    .end-shift-modal .modal { max-width: 420px; padding: 22px; border-radius: var(--radius-pill); max-height: 85vh; overflow-y: auto; }
+    .end-shift-summary { background: var(--parchment); border-radius: var(--radius-lg); padding: 12px 14px; margin: 10px 0; }
+    .end-shift-row { display: flex; justify-content: space-between; font-size: 0.87rem; color: var(--roast); padding: 4px 0; border-bottom: 1px solid var(--latte); }
+    .end-shift-row:last-child { border-bottom: none; }
+    .end-shift-row.section-head { font-weight: 700; color: var(--mahogany); font-size: 0.76rem; letter-spacing: 0.07em; text-transform: uppercase; border-top: 1.5px solid var(--mochaccino); margin-top: 4px; padding-top: 9px; }
+    .end-shift-row.bold { font-weight: 700; color: var(--roast); }
+    .end-shift-actions { display: flex; gap: 10px; margin-top: 12px; }
+    .end-shift-actions button { flex: 1; padding: 12px; border-radius: var(--radius-lg); font-weight: 700; font-size: 0.88rem; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; border: none; transition: all .2s; }
+    .btn-cancel-shift  { background: var(--sand); color: var(--mahogany); border: 1.5px solid var(--sand-border) !important; }
+    .btn-cancel-shift:hover  { background: var(--sand-hover); }
+    .btn-confirm-shift { background: var(--grad-cta); color: var(--white); box-shadow: 0 3px 10px rgba(107,61,30,0.25); }
+    .btn-confirm-shift:hover { background: var(--grad-cta); transform: translateY(-1px); }
+
+    @media (max-width: 380px) {
+      .drinks-grid { gap: 6px; }
+      .drink-btn   { padding: 10px 4px 8px; border-radius: var(--radius-md); }
+      .drink-btn-icon { font-size: 1.25rem; }
+      .flavor-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Flavor out-of-stock toast ── */
+    .flavor-toast {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%) translateY(-8px);
+      background: var(--danger-soft); color: var(--white); font-size: 0.8rem; font-weight: 700;
+      padding: 8px 18px; border-radius: var(--radius-pill);
+      box-shadow: 0 3px 14px rgba(192,102,90,0.4);
+      opacity: 0; transition: opacity .2s, transform .2s;
+      pointer-events: none; white-space: nowrap; z-index: 10;
+    }
+    .flavor-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @keyframes shakeGrid {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    /* ── Done button on order log ── */
+    .order-done-btn {
+      background: var(--sand); border: 1.5px solid var(--sand-border); border-radius: 8px;
+      padding: 4px 10px; font-size: 0.7rem; font-weight: 700; color: var(--mahogany);
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; transition: all .15s; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .order-done-btn.done { background: var(--success-bg-alt); border-color: #90c890; color: var(--success-dark); }
+    .order-done-btn:active { transform: scale(0.9); }
+    .order-log-item.order-done { opacity: 0.6; }
+    .order-log-item.order-done .order-log-num { text-decoration: line-through; opacity: 0.7; }
+
+    /* ── Flavor settings modal ── */
+    .flavor-settings-btn {
+      flex: 1; background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.22);
+      border-radius: var(--radius-md); padding: 8px 4px; color: rgba(255,255,255,0.7);
+      font-size: 0.72rem; font-weight: 700; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      transition: all .16s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      text-align: center;
+    }
+    .flavor-settings-btn:hover { background: rgba(255,255,255,0.22); color: var(--white); }
+    .flavor-settings-btn:active { transform: scale(0.96); }
+
+    .fsettings-cat { margin-bottom: 16px; }
+    .fsettings-cat-title {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--dust); margin-bottom: 8px;
+      padding-bottom: 5px; border-bottom: 1px solid var(--latte);
+    }
+    .fsettings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .fsettings-pill {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--parchment); border: 1.5px solid var(--sand-border); border-radius: var(--radius-md);
+      padding: 8px 10px; font-size: 0.76rem; font-weight: 600; color: var(--roast);
+      cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif; transition: all .14s; gap: 6px;
+    }
+    .fsettings-pill:active { transform: scale(0.95); }
+    .fsettings-pill.oos {
+      background: var(--danger-bg); border-color: #f0c0c0; color: #b05050;
+      text-decoration: line-through; opacity: 0.75;
+    }
+    .fsettings-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: var(--success-mid); transition: background .14s;
+    }
+    .fsettings-pill.oos .fsettings-dot { background: #e08080; }
+    @media (max-width: 380px) { .fsettings-grid { grid-template-columns: repeat(2,1fr); } }
+
+    /* ── Mid-Shift Stock panel ── */
+    .pos-stock-panel {
+      background: var(--cream); border: 1.5px solid var(--latte); border-radius: 16px; overflow: hidden;
+    }
+    .pos-stock-header {
+      background: var(--parchment); padding: 9px 14px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--latte); cursor: pointer;
+    }
+    .pos-stock-title { font-size: 0.75rem; font-weight: 700; color: var(--bark); letter-spacing: 0.09em; text-transform: uppercase; }
+    .pos-stock-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--sand); color: var(--mahogany); margin-left: auto; margin-right: 8px; }
+    .pos-stock-toggle { font-size: 0.7rem; color: var(--dust); transition: transform .2s; }
+    .pos-stock-toggle.open { transform: rotate(180deg); }
+    .pos-stock-body { padding: 12px 14px 14px; display: none; }
+    .pos-stock-body.open { display: block; }
+    .stock-sub-label { font-size: 0.67rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; margin: 10px 0 6px; }
+    .stock-sub-label:first-child { margin-top: 0; }
+    .stock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .stock-cell { display: flex; flex-direction: column; gap: 3px; }
+    .stock-cell-label { font-size: 0.66rem; font-weight: 700; color: var(--bark); text-align: center; }
+    .stock-cell-input {
+      padding: 8px 4px; border: 1.5px solid var(--sand-border); border-radius: 9px;
+      font-size: 0.9rem; font-family: "Plus Jakarta Sans", sans-serif; background: var(--pearl); color: var(--espresso);
+      text-align: center; width: 100%; box-sizing: border-box;
+    }
+    .stock-cell-input:focus { outline: none; border-color: var(--clay); background: var(--white); }
+    .stock-del-input { border-color: var(--success-border) !important; background: var(--success-bg) !important; }
+    .stock-del-input:focus { border-color: var(--success-mid) !important; }
+    .stock-dmg-input { border-color: #f0c8b8 !important; background: #fdf4f2 !important; }
+    .stock-dmg-input:focus { border-color: #e08060 !important; }
+
+    /* ── Offline banner ── */
+    .offline-banner {
+      position: sticky; top: 0; z-index: 200;
+      background: linear-gradient(135deg, var(--danger-darkest), var(--danger-deep));
+      color: var(--white); text-align: center; padding: 7px 16px;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em;
+      display: none; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 2px 8px rgba(180,60,0,0.35);
+    }
+    .offline-banner.visible { display: flex; }
+    .offline-banner .offline-retry {
+      background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 6px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700;
+      color: var(--white); cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif;
+    }
+
+    /* ── Progress bar ── */
+    .quota-bar-wrap {
+      width: 100%; padding: 0 0 6px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .quota-bar-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.62rem; color: rgba(255,255,255,0.55); font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+    .quota-bar-track {
+      width: 100%; height: 5px; background: rgba(255,255,255,0.12);
+      border-radius: 3px; overflow: hidden;
+    }
+    .quota-bar-fill {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--caramel), var(--honey));
+      transition: width .5s cubic-bezier(.4,0,.2,1), background .6s ease;
+      min-width: 4px;
+    }
+    .quota-bar-fill.near   { background: linear-gradient(90deg, var(--honey), #E8C060); }
+    .quota-bar-fill.hit    { background: linear-gradient(90deg, var(--success-light), var(--success-mid)); }
+    .quota-bar-fill.exceed { background: linear-gradient(90deg, var(--success-light), var(--success-mid)); }
+    /* Bonus mode: teal shimmer — replaces the bar after quota flash */
+    .quota-bar-fill.bonus {
+      background: linear-gradient(90deg, var(--info-deep) 0%, #30b8d4 40%, #60d8ee 60%, var(--info-deep) 100%);
+      background-size: 250% 100%;
+      animation: bonusShimmer 2.2s ease-in-out infinite;
+    }
+    @keyframes bonusShimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes barFlash {
+      0%   { filter: brightness(1); }
+      35%  { filter: brightness(2.2); transform: scaleY(2); }
+      100% { filter: brightness(1); transform: scaleY(1); }
+    }
+    .quota-bar-fill.flashing { animation: barFlash .55s ease forwards; }
+    @keyframes barPulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+
+    /* ── Order edit controls (placed orders) ── */
+    .order-edit-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-bottom: 1px solid rgba(226,201,168,0.4);
+      animation: slideIn .15s ease;
+    }
+    .order-edit-row:last-child { border-bottom: none; }
+    .order-edit-name { flex: 1; font-size: 0.80rem; color: var(--roast); font-weight: 600; line-height: 1.3; }
+    .order-edit-flavor { font-size: 0.70rem; color: var(--bark); display: block; }
+    .order-edit-qty-wrap { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .order-edit-btn {
+      width: 26px; height: 26px; border-radius: 8px; border: 1.5px solid var(--latte);
+      background: var(--parchment); color: var(--mahogany); font-weight: 800; font-size: 0.95rem;
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .12s; -webkit-tap-highlight-color: transparent;
+    }
+    .order-edit-btn:hover  { background: var(--latte); }
+    .order-edit-btn:active { transform: scale(0.88); }
+    .order-edit-btn.remove { border-color: var(--danger-border); color: var(--danger); background: var(--danger-bg); }
+    .order-edit-qty { font-size: 0.88rem; font-weight: 700; color: var(--roast); min-width: 22px; text-align: center; }
+    .order-edit-total { font-size: 0.80rem; font-weight: 600; color: var(--mahogany); min-width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+    .order-edit-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 14px 4px; border-bottom: 1px solid rgba(226,201,168,0.4);
+    }
+    .order-edit-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--bark); }
+    .order-edit-save {
+      font-size: 0.72rem; font-weight: 700; color: var(--success);
+      background: none; border: none; cursor: pointer; font-family: "Plus Jakarta Sans", sans-serif;
+      padding: 2px 6px;
+    }
+
+
+    /* ── Quota toast ── */
+    .quota-toast {
+      position: fixed; top: 76px; left: 50%; transform: translateX(-50%) translateY(-12px);
+      background: linear-gradient(135deg, var(--success-light), var(--success-dark)); color: var(--white);
+      padding: 11px 22px; border-radius: var(--radius-lg); font-weight: 700; font-size: 0.88rem;
+      box-shadow: 0 4px 22px rgba(46,122,46,0.38); z-index: 300; pointer-events: none;
+      opacity: 0; transition: opacity .3s, transform .3s; white-space: nowrap; text-align: center;
+    }
+    .quota-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ═══════════ v2: popups, per-cup customize, tools row ═══════════ */
+    .modal-overlay.centered .modal.popup { max-width: 460px; width: 100%; max-height: 88vh; border-radius: 20px; border-top: none; box-shadow: 0 20px 60px rgba(40,20,5,0.35); }
+    .popup-body { overflow-y: auto; padding: 14px 18px 18px; flex: 1; }
+    .popup-label {
+      font-size: 0.66rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--dust); margin: 4px 0 8px; display: flex; align-items: baseline; gap: 6px;
+    }
+    .popup-label small { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: var(--mochaccino); }
+    .popup-label + .addon-pills, .popup-label + .note-chips { margin-bottom: 16px; }
+    .addon-pill { position: relative; user-select: none; -webkit-user-select: none; }
+    .addon-pill-name  { line-height: 1.2; }
+    .addon-pill-price { opacity: .55; font-size: .68rem; font-weight: 600; }
+    .addon-minus {
+      position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--white); border: 1.5px solid var(--sand-border); color: var(--danger-soft);
+      font-size: 0.9rem; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .addon-minus:active { transform: scale(0.88); }
+    .note-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .note-chip {
+      background: var(--pearl); border: 1.5px solid var(--latte); border-radius: var(--radius-pill);
+      padding: 8px 13px; font-size: 0.78rem; font-weight: 600; color: var(--mahogany);
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; transition: all .14s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .note-chip:active { transform: scale(0.95); }
+    .note-chip.active { background: var(--roast); border-color: var(--roast); color: var(--white); }
+    .note-input {
+      width: 100%; box-sizing: border-box; background: var(--pearl); border: 1.5px solid var(--latte);
+      border-radius: var(--radius-md); padding: 10px 12px; font-size: 0.86rem; color: var(--roast);
+      font-family: "Plus Jakarta Sans", sans-serif;
+    }
+    .note-input:focus { outline: none; border-color: var(--clay); }
+    .order-item-code { opacity: .45; font-size: .72em; font-weight: 700; letter-spacing: .04em; }
+    .order-item-info { min-width: 0; }
+    .order-item-addons .note-tag {
+      background: var(--roast); color: var(--white); font-size: 0.64rem; font-weight: 700;
+      padding: 1px 7px; border-radius: var(--radius-pill);
+    }
+    .order-item-addons.muted { text-decoration: underline dotted; text-underline-offset: 3px; }
+    .receipt-row.note-row { padding-left: 10px; color: var(--bark); font-size: 0.74rem; font-style: italic; }
+    .order-edit-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+    .tools-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .tool-btn {
+      background: var(--cream); border: 1.5px solid var(--latte); border-radius: var(--radius-lg);
+      padding: 11px 6px; font-size: 0.74rem; font-weight: 700; color: var(--mahogany);
+      font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer; transition: all .14s;
+      display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent;
+    }
+    .tool-btn:hover { background: var(--parchment); border-color: var(--clay); }
+    .tool-btn:active { transform: scale(0.96); }
+    .tool-btn-badge {
+      font-size: 0.62rem; font-weight: 700; padding: 1px 7px; border-radius: var(--radius-pill);
+      background: var(--sand); color: var(--mahogany);
+    }
+    .flavor-toast.neutral { background: var(--roast); box-shadow: 0 3px 14px rgba(60,20,0,0.35); }
+
+    /* ── Scroll lock while a pop-up is open ── */
+    html.modal-open, html.modal-open body { overflow: hidden; }
+    .modal-overlay { overscroll-behavior: contain; }
+
+    /* ── Cup picker ── */
+    .cup-pick-list { display: flex; flex-direction: column; gap: 8px; }
+    .cup-pick-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+      background: var(--pearl); border: 1.5px solid var(--latte); border-radius: var(--radius-md);
+      padding: 12px 14px; font-family: "Plus Jakarta Sans", sans-serif; cursor: pointer;
+      color: var(--roast); font-size: 0.86rem; font-weight: 700; text-align: left;
+      transition: all .14s; -webkit-tap-highlight-color: transparent;
+    }
+    .cup-pick-btn:hover { background: var(--parchment); border-color: var(--clay); }
+    .cup-pick-btn:active { transform: scale(0.98); }
+    .cup-pick-sub  { display: block; font-size: 0.72rem; font-weight: 500; color: var(--bark); margin-top: 2px; }
+    .cup-pick-go   { font-size: 0.74rem; font-weight: 700; color: var(--mahogany); white-space: nowrap; }
+  </style>
 </head>
 <body class="has-bottom-nav">
 
-<script>
-  if ((localStorage.getItem("brewsDeviceRole") || "worker") === "manager") {
-    window.location.replace("index.html");
-  }
-</script>
 
 <!-- ═══════════ SETUP SCREEN ═══════════ -->
 <div id="setupScreen">
   <div class="container">
-    <div id="posHeaderRoot"></div>
-    <script>
-      document.getElementById("posHeaderRoot").innerHTML = renderPageHeader({
-        subtitle: "Point of Sale",
-        extraButtonsHTML: `<span style="font-size:0.68rem;color:var(--dust);font-weight:600;letter-spacing:0.1em;text-transform:uppercase;">POS Setup</span>`
-      });
-    </script>
+    <div data-layout-header data-subtitle="Point of Sale" data-pos="setup"></div>
     <div class="setup-note">
       Enter beginning cup counts before starting the shift. The POS will track stock, flavors, add-ons, and auto-fill the inventory form when you end the shift.
     </div>
@@ -94,7 +815,7 @@
           <span class="pos-clock" id="shiftTimer">0m 00s</span>
         </div>
       </div>
-      <button class="end-shift-btn" onclick="openEndShift()">⏹ End Shift</button>
+      <button class="end-shift-btn" onclick="openEndShift()">End Shift</button>
     </div>
     <!-- Row 2: Stats -->
     <div class="pos-header-row2">
@@ -106,10 +827,6 @@
         <span class="header-stat-label">Cup Sales</span>
         <span class="header-stat-val" id="shiftTotalDisplay">₱0.00</span>
       </div>
-    </div>
-    <!-- Row 2b: Actions -->
-    <div class="pos-header-actions">
-      <button class="flavor-settings-btn" onclick="openFlavorSettings()">⚙ Flavors</button>
     </div>
     <!-- Row 3: Single adaptive progress bar (to-quota → bonus mode) -->
     <div class="quota-bar-wrap">
@@ -125,7 +842,7 @@
 
   <!-- Offline indicator -->
   <div class="offline-banner" id="offlineBanner">
-    <span>📡 No connection — orders save locally. Push when back online.</span>
+    <span>No connection — orders save locally. Push when back online.</span>
     <button class="offline-retry" onclick="retryConnection()">Retry</button>
   </div>
 
@@ -133,7 +850,15 @@
 
     <!-- Drinks -->
     <div>
-      <div class="drinks-section-label">Drinks</div>
+      <div class="drinks-section-label drinks-section-row">
+        <span>Menu <span style="font-weight:500;text-transform:none;letter-spacing:0;opacity:.8;">· tap to order · hold to remove</span></span>
+        <button type="button" class="menu-edit-btn" id="menuEditBtn" onclick="toggleMenuEdit(true)">✏️ Edit</button>
+      </div>
+      <div class="menu-edit-bar" id="menuEditBar">
+        <span>Drag to reorder · tap to edit</span>
+        <button type="button" onclick="resetMenuLayout()">Reset</button>
+        <button type="button" class="done" onclick="toggleMenuEdit(false)">Done</button>
+      </div>
       <div class="drinks-grid" id="drinksGrid"></div>
     </div>
 
@@ -161,7 +886,7 @@
 
       <!-- Footer -->
       <div class="order-footer">
-        <button class="paid-online-btn" id="pendingPaidOnlineBtn" style="margin-bottom:9px;" onclick="togglePendingPaidOnline()">📱 Paid Online (GCash)</button>
+        <button class="paid-online-btn" id="pendingPaidOnlineBtn" style="margin-bottom:9px;" onclick="togglePendingPaidOnline()">Paid Online (GCash)</button>
         <div class="order-subtotal">
           <span>Subtotal</span>
           <span id="orderSubtotal">₱0.00</span>
@@ -172,41 +897,11 @@
       </div>
     </div>
 
-    <!-- Shift Expenses -->
-    <div class="pos-expenses-panel">
-      <div class="pos-expenses-header" onclick="toggleExpenses()">
-        <span class="pos-expenses-title">Shift Expenses</span>
-        <span class="pos-expenses-toggle" id="expensesToggle">▼</span>
-      </div>
-      <div class="pos-expenses-body" id="posExpensesBody">
-        <div id="posExpensesContainer" style="margin-bottom:8px;"></div>
-        <button class="add-expense-btn" style="margin-top:0;" onclick="addPosExpenseRow()">+ Add Expense</button>
-      </div>
-    </div>
-
-    <!-- Mid-Shift Stock: Deliveries & Damages -->
-    <div class="pos-stock-panel">
-      <div class="pos-stock-header" onclick="toggleStockPanel()">
-        <span class="pos-stock-title">Mid-Shift Stock</span>
-        <span class="pos-stock-badge" id="stockBadge" style="display:none;"></span>
-        <span class="pos-stock-toggle" id="stockToggle">▼</span>
-      </div>
-      <div class="pos-stock-body" id="posStockBody">
-        <div class="stock-sub-label" style="color:var(--success-dark);">📦 Delivered Cups</div>
-        <div class="stock-grid">
-          <div class="stock-cell"><div class="stock-cell-label">Medium</div>  <input class="stock-cell-input stock-del-input" type="number" id="sDelM"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Large</div>   <input class="stock-cell-input stock-del-input" type="number" id="sDelL"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Small</div>   <input class="stock-cell-input stock-del-input" type="number" id="sDelS"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Hot ☕</div>   <input class="stock-cell-input stock-del-input" type="number" id="sDelHC" min="0" placeholder="0" oninput="saveStockInputs()"></div>
-        </div>
-        <div class="stock-sub-label" style="color:var(--danger-soft);">💔 Damaged Cups</div>
-        <div class="stock-grid">
-          <div class="stock-cell"><div class="stock-cell-label">Medium</div>  <input class="stock-cell-input stock-dmg-input" type="number" id="sDmgM"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Large</div>   <input class="stock-cell-input stock-dmg-input" type="number" id="sDmgL"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Small</div>   <input class="stock-cell-input stock-dmg-input" type="number" id="sDmgS"  min="0" placeholder="0" oninput="saveStockInputs()"></div>
-          <div class="stock-cell"><div class="stock-cell-label">Hot ☕</div>   <input class="stock-cell-input stock-dmg-input" type="number" id="sDmgHC" min="0" placeholder="0" oninput="saveStockInputs()"></div>
-        </div>
-      </div>
+    <!-- Tools -->
+    <div class="tools-row">
+      <button class="tool-btn" onclick="openFlavorSettings()"><span>Flavors</span></button>
+      <button class="tool-btn" onclick="openExpensesModal()"><span>Expenses</span><span class="tool-btn-badge" id="expensesBadge" style="display:none;"></span></button>
+      <button class="tool-btn" onclick="openStockModal()"><span>Stock</span><span class="tool-btn-badge" id="stockBadge" style="display:none;"></span></button>
     </div>
 
     <!-- Orders Log -->
@@ -216,7 +911,7 @@
         <span class="orders-count-badge" id="ordersCountBadge">0</span>
       </div>
       <div id="ordersLogList">
-        <div class="no-orders">No orders yet — get brewing! ☕</div>
+        <div class="no-orders">No orders yet</div>
       </div>
     </div>
 
@@ -227,9 +922,8 @@
 <div class="quota-toast" id="quotaToast">🎉 Quota reached! ₱3,000 in cup sales!</div>
 
 <!-- ═══════════ FLAVOR MODAL (bottom sheet) ═══════════ -->
-<div class="modal-overlay" id="flavorModal" onclick="handleFlavorOverlay(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
+<div class="modal-overlay centered" id="flavorModal">
+  <div class="modal popup">
     <div class="modal-header-row" style="position:relative;">
       <div class="flavor-toast" id="flavorToast"></div>
       <div>
@@ -252,18 +946,92 @@
 
 
 <!-- ═══════════ ITEM ADD-ON MODAL (bottom sheet) ═══════════ -->
-<div class="modal-overlay" id="itemAddonModal" onclick="handleItemAddonOverlay(event)">
-  <div class="modal">
-    <div class="modal-handle"></div>
+<!-- ═══════════ CUP PICKER (choose which cup of a stack to customize) ═══════════ -->
+<div class="modal-overlay centered" id="cupPickModal">
+  <div class="modal popup">
     <div class="modal-header-row">
       <div>
-        <div class="modal-title" id="itemAddonModalTitle">Add-ons</div>
+        <div class="modal-title">Choose a Cup</div>
+        <div class="modal-sub" id="cupPickSub"></div>
+      </div>
+    </div>
+    <div class="popup-body">
+      <div class="cup-pick-list" id="cupPickList"></div>
+    </div>
+    <div class="flavor-modal-footer">
+      <button class="flavor-modal-done-btn" onclick="closeCupPicker()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay centered" id="itemAddonModal">
+  <div class="modal popup">
+    <div class="modal-header-row">
+      <div>
+        <div class="modal-title" id="itemAddonModalTitle">Customize Cup</div>
         <div class="modal-sub" id="itemAddonModalSub"></div>
       </div>
-      <button class="modal-cancel-btn" onclick="closeItemAddonModal()">Done</button>
     </div>
-    <div class="flavor-scroll">
-      <div class="addon-pills" id="itemAddonGrid" style="padding:4px 18px 18px;"></div>
+    <div class="popup-body">
+      <div class="popup-label">Add-ons <small>this cup only · tap to add</small></div>
+      <div class="addon-pills" id="itemAddonGrid"></div>
+      <div class="popup-label">Notes <small>this cup only</small></div>
+      <div class="note-chips" id="itemNoteChips"></div>
+      <input type="text" class="note-input" id="itemNoteInput" maxlength="80"
+        placeholder="Other request (optional)" style="margin-top:10px;" oninput="onItemNoteInput(this.value)">
+    </div>
+    <div class="flavor-modal-footer">
+      <button class="flavor-modal-done-btn" onclick="closeItemAddonModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EXPENSES MODAL ═══════════ -->
+<div class="modal-overlay centered" id="expensesModal">
+  <div class="modal popup">
+    <div class="modal-header-row">
+      <div>
+        <div class="modal-title">Shift Expenses</div>
+        <div class="modal-sub">Money paid out during this shift</div>
+      </div>
+    </div>
+    <div class="popup-body">
+      <div id="posExpensesContainer"></div>
+      <button class="add-expense-btn" onclick="addPosExpenseRow()">+ Add Expense</button>
+    </div>
+    <div class="flavor-modal-footer">
+      <button class="flavor-modal-done-btn" onclick="closeExpensesModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ STOCK MODAL ═══════════ -->
+<div class="modal-overlay centered" id="stockModal">
+  <div class="modal popup">
+    <div class="modal-header-row">
+      <div>
+        <div class="modal-title">Mid-Shift Stock</div>
+        <div class="modal-sub">Record cup deliveries and damages</div>
+      </div>
+    </div>
+    <div class="popup-body">
+      <div class="stock-sub-label" style="color:var(--success-dark);">Delivered Cups</div>
+      <div class="stock-grid">
+        <div class="stock-cell"><div class="stock-cell-label">Medium</div><input class="stock-cell-input stock-del-input" type="number" id="sDelM" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Large</div><input class="stock-cell-input stock-del-input" type="number" id="sDelL" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Small</div><input class="stock-cell-input stock-del-input" type="number" id="sDelS" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Hot</div><input class="stock-cell-input stock-del-input" type="number" id="sDelHC" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+      </div>
+      <div class="stock-sub-label" style="color:var(--danger-soft);">Damaged Cups</div>
+      <div class="stock-grid">
+        <div class="stock-cell"><div class="stock-cell-label">Medium</div><input class="stock-cell-input stock-dmg-input" type="number" id="sDmgM" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Large</div><input class="stock-cell-input stock-dmg-input" type="number" id="sDmgL" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Small</div><input class="stock-cell-input stock-dmg-input" type="number" id="sDmgS" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+        <div class="stock-cell"><div class="stock-cell-label">Hot</div><input class="stock-cell-input stock-dmg-input" type="number" id="sDmgHC" min="0" placeholder="0" oninput="saveStockInputs()"></div>
+      </div>
+    </div>
+    <div class="flavor-modal-footer">
+      <button class="flavor-modal-done-btn" onclick="closeStockModal()">Done</button>
     </div>
   </div>
 </div>
@@ -302,7 +1070,7 @@
 </div>
 
 <!-- ═══════════ BOTTOM NAV ═══════════ -->
-<script>document.write(renderBottomNav("shift", { shiftIsCurrentPage: true }));</script>
+<div data-layout-nav="shift" data-shift-current></div>
 
 <!-- ═══════════ FLAVOR SETTINGS MODAL ═══════════ -->
 <div class="modal-overlay centered" id="flavorSettingsModal" onclick="handleFlavorSettingsOverlay(event)">
@@ -321,15 +1089,10 @@
 <script src="js/settings.js"></script>
 
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" onerror="console.warn('Firebase CDN unavailable')"></script>
-<script>
-  if (typeof window.syncPull      !== "function") window.syncPull      = async () => { throw new Error("Sync unavailable"); };
-</script>
-<script src="js/sync.js" onerror="console.warn('sync.js not found')"></script>
-<script src="js/pages/pos.js"></script>
-<script src="js/ui/sw-register.js"></script>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/pos.js"></script>
 </body>
 </html>
-

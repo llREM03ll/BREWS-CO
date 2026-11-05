@@ -63,7 +63,7 @@ function getAutoCupNeeds() {
 
 function getAutoFlavorNeeds() {
   try {
-    const oos  = JSON.parse(localStorage.getItem("brewsFlavorOOS") || "[]");
+    const oos  = readJSON("brewsFlavorOOS", []);
     const seen = new Set();
     return oos.map(key => {
       const name = key.startsWith("FT:") ? key.slice(3) : key;
@@ -103,7 +103,7 @@ function renderNeedsAutoPreview() {
       <div style="display:flex;align-items:center;justify-content:space-between;
         background:#fff4f0;border:1.5px solid #f0c8b8;border-radius:10px;
         padding:8px 12px;margin-bottom:5px;font-size:0.84rem;">
-        <span style="font-weight:600;color:#5c4631;">${c.label}</span>
+        <span style="font-weight:600;color:#5c4631;">${esc(c.label)}</span>
         <span style="font-size:0.76rem;color:#c0665a;font-weight:700;">${c.remaining} left (≤${low})</span>
       </div>`).join("");
   }
@@ -147,12 +147,17 @@ function addExpenseRow(name = "", price = "") {
   const row       = document.createElement("div");
   row.className   = "expense-row";
   row.innerHTML   = `
-    <input type="text"   class="exp-name"  placeholder="Item name" value="${name}">
+    <input type="text"   class="exp-name"  placeholder="Item name" value="${esc(name)}">
     <input type="number" class="exp-price" placeholder="₱0"        value="${price}">
     <button type="button" onclick="this.parentElement.remove(); saveInputs();">x</button>
   `;
   row.addEventListener("input", saveInputs);
   container.appendChild(row);
+}
+
+// ── Extras (Fruit Tea + added products) saved by the POS at End Shift ─────────
+function getCalcExtras() {
+  try { return readJSON("brewsCalcExtras", []); } catch { return []; }
 }
 
 // ── Calculate ─────────────────────────────────────────────────────────────────
@@ -168,6 +173,7 @@ function calculate() {
   system.setCupsHC(v("beginHC"), v("endHC"));
   system.setMC(v("tallyMC"));
   system.setLC(v("tallyLC"));
+  system.setExtras(getCalcExtras());
   system.setExpenses(getExpensesFromUI());
   system.setAddons(v("addons"));
 
@@ -187,10 +193,11 @@ function calculate() {
     { item: system.MC, beg: null,         end: null,        dmg: 0      },
     { item: system.HC, beg: v("beginHC"), end: v("endHC"), dmg: dmg.HC },
     { item: system.S,  beg: v("beginS"),  end: v("endS"),  dmg: dmg.S  },
+    ...system.extras.map(item => ({ item, beg: null, end: null, dmg: 0 })),
   ];
 
   const dash = val => (val === null ? "—" : val);
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDate();
   const existingDate = document.getElementById("resultDate")?.value || today;
   lastRenderDate = existingDate;
 
@@ -233,7 +240,7 @@ function calculate() {
         : `${beg}`;
 
     html += `<tr>
-      <td>${item.name}</td>
+      <td>${esc(item.name)}</td>
       <td>${displayBeg}</td>
       <td>${warnIfNeg(item.usedCups, item.usedCups)}</td>
       <td>${formatMoney(item.price)}</td>
@@ -293,7 +300,7 @@ function calculate() {
     </tr>
   `;
   system.expensesList.forEach(e => {
-    html += `<tr class="expense-sub"><td>${e.name}</td><td style="text-align:right">- ${formatMoney(e.price)}</td></tr>`;
+    html += `<tr class="expense-sub"><td>${esc(e.name)}</td><td style="text-align:right">- ${formatMoney(e.price)}</td></tr>`;
   });
   html += `
     <tr><td style="padding-top:12px;border-top:1px solid #e8d5c4;">Gross Income:</td>
@@ -316,16 +323,14 @@ function calculate() {
     dmg, del,
     origBegs, deliveries,
     shiftDuration: (() => {
+      let ms = parseInt(localStorage.getItem("brewsShiftMs") || "0", 10);
       try {
-        const s = JSON.parse(localStorage.getItem("brewsPOSState") || "{}");
-        if (s.shiftStartTime) {
-          const ms = Date.now() - s.shiftStartTime;
-          const h  = Math.floor(ms / 3600000);
-          const m  = Math.floor((ms % 3600000) / 60000);
-          return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        }
+        const s = readJSON("brewsPOSState", {});
+        if (s.shiftStartTime) ms = Date.now() - s.shiftStartTime;
       } catch {}
-      return null;
+      if (!ms) return null;
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
     })(),
   };
   renderResults(html);
@@ -336,10 +341,10 @@ function calculate() {
 
 // ── Save to history ───────────────────────────────────────────────────────────
 
-async function saveCurrentResults() {
-  if (!lastRenderContent) { await BrewsDialog.alert("Please compute first."); return; }
+function saveCurrentResults() {
+  if (!lastRenderContent) { alert("Please compute first."); return; }
   const dateInput  = document.getElementById("resultDate");
-  const editedDate = dateInput?.value || lastRenderDate || new Date().toISOString().split("T")[0];
+  const editedDate = dateInput?.value || lastRenderDate || localDate();
   saveHistory(editedDate, lastRenderContent);
 
   // Save ending cups for carry-over to next shift
@@ -355,15 +360,13 @@ async function saveCurrentResults() {
     btn.style.opacity = "0.65"; btn.style.cursor = "default";
   }
 
-  // Auto-push to cloud immediately after saving (workers only)
+  // Auto-push to cloud immediately after saving
   _autoPushAfterSave();
 }
 
 // ── Auto-push toast helpers ───────────────────────────────────────────────────
 async function _autoPushAfterSave() {
-  // Skip if sync functions are not available or this is a manager device
   if (typeof syncPush !== "function") return;
-  if (typeof getDeviceRole === "function" && getDeviceRole() === "manager") return;
 
   _showSyncToast("☁️ Syncing to cloud…", "#7a5c3e", false);
   try {
@@ -399,9 +402,8 @@ function _showSyncToast(msg, color, autoDismiss) {
 
 // ── Clear all ─────────────────────────────────────────────────────────────────
 
-async function clearAll() {
-  const ok = await BrewsDialog.confirm("Clear all inputs and results?", { okLabel: "Clear", danger: true });
-  if (!ok) return;
+function clearAll() {
+  if (!confirm("Clear all inputs and results?")) return;
   document.querySelectorAll("input").forEach(i => { if (!i.disabled) i.value = ""; });
   document.getElementById("results").innerHTML           = "";
   document.getElementById("expensesContainer").innerHTML = "";
@@ -414,14 +416,14 @@ async function clearAll() {
 
 // ── Print Receipt as Image ────────────────────────────────────────────────────
 
-async function printReceipt() {
-  if (!lastRenderData) { await BrewsDialog.alert("Please compute first."); return; }
-  if (typeof html2canvas === "undefined") { await BrewsDialog.alert("Image library not loaded. Refresh and try again."); return; }
+function printReceipt() {
+  if (!lastRenderData) { alert("Please compute first."); return; }
+  if (typeof html2canvas === "undefined") { alert("Image library not loaded. Refresh and try again."); return; }
 
   const d = lastRenderData;
 
   // ── Build filename: MMDDYY_cashonhand ─────────────────────────────────────
-  const dp     = (d.date || new Date().toISOString().split("T")[0]).split("-");
+  const dp     = (d.date || localDate()).split("-");
   const mmddyy = dp[1] + dp[2] + dp[0].slice(2);
   const cash   = Math.round(d.finalTotal);
   const filename = `${mmddyy}_${cash}.png`;
@@ -450,7 +452,7 @@ async function printReceipt() {
 
     return `
       <tr>
-        <td style="text-align:left;padding:6px 8px;color:${neg?"#c0665a":"#3d2b1a"};border-bottom:1px solid #f0e4d8;word-break:break-word;">${item.name}</td>
+        <td style="text-align:left;padding:6px 8px;color:${neg?"#c0665a":"#3d2b1a"};border-bottom:1px solid #f0e4d8;word-break:break-word;">${esc(item.name)}</td>
         <td style="text-align:center;padding:6px 4px;color:#7a5c3e;border-bottom:1px solid #f0e4d8;line-height:1.3;">${begDisplay}</td>
         <td style="text-align:center;padding:6px 4px;color:${neg?"#c0665a":"#3d2b1a"};font-weight:${neg?700:400};border-bottom:1px solid #f0e4d8;">${item.usedCups}${neg?" ⚠":""}</td>
         <td style="text-align:center;padding:6px 4px;color:#9a7a5e;border-bottom:1px solid #f0e4d8;">${fmtR(item.price)}</td>
@@ -460,7 +462,7 @@ async function printReceipt() {
   }).join("");
 
   const expRows = d.expenses.map(e =>
-    `<tr><td style="padding:3px 8px 3px 20px;color:#9a7a5e;font-size:.83rem" colspan="2">↳ ${e.name}</td>
+    `<tr><td style="padding:3px 8px 3px 20px;color:#9a7a5e;font-size:.83rem" colspan="2">↳ ${esc(e.name)}</td>
          <td style="text-align:right;padding:3px 8px;color:#9a7a5e;font-size:.83rem" colspan="4">− ${fmtR(e.price)}</td></tr>`
   ).join("");
 
@@ -505,15 +507,7 @@ async function printReceipt() {
 
     <!-- Cup Sales table -->
     <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#b08060;margin-bottom:8px;text-align:center;">Cup Sales</div>
-    <table style="width:100%;border-collapse:collapse;font-size:0.8rem;table-layout:fixed;">
-      <colgroup>
-        <col style="width:22%">
-        <col style="width:12%">
-        <col style="width:12%">
-        <col style="width:18%">
-        <col style="width:12%">
-        <col style="width:24%">
-      </colgroup>
+    <table class="rcpt-fit" style="width:100%;border-collapse:collapse;font-size:0.8rem;">
       <thead>
         <tr style="background:#f5ede5;">
           <th style="text-align:left;padding:6px 8px;color:#9a7a5e;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">Item</th>
@@ -539,7 +533,7 @@ async function printReceipt() {
     <div style="border-top:1.5px dashed #d4b89e;margin:14px 0;"></div>
 
     <!-- Breakdown -->
-    <table style="width:100%;border-collapse:collapse;font-size:0.84rem;">
+    <table class="rcpt-fit" style="width:100%;border-collapse:collapse;font-size:0.84rem;">
       <tr style="border-bottom:1px solid #e8d5c4;">
         <td style="padding:6px 8px;color:#3d2b1a;font-weight:700;">Total Expenses:</td>
         <td style="text-align:right;padding:6px 8px;color:#3d2b1a;font-weight:700;">− ${fmtR(d.salary + d.expenses.reduce((s,e)=>s+e.price,0))}</td>
@@ -550,7 +544,7 @@ async function printReceipt() {
       </tr>
       ${d.expenses.map(e=>`
       <tr style="border-bottom:1px solid #f0e4d8;">
-        <td style="padding:3px 8px 3px 22px;color:#9a7a5e;font-size:0.8rem;">${e.name}</td>
+        <td style="padding:3px 8px 3px 22px;color:#9a7a5e;font-size:0.8rem;">${esc(e.name)}</td>
         <td style="text-align:right;padding:3px 8px;color:#9a7a5e;font-size:0.8rem;">− ${fmtR(e.price)}</td>
       </tr>`).join("")}
       <tr style="border-bottom:1px solid #e8d5c4;">
@@ -582,7 +576,7 @@ async function printReceipt() {
 
       const cupRows = needs.cups.map(c => `
         <tr style="border-bottom:1px solid #f0e4d8;">
-          <td style="padding:5px 8px;font-size:0.82rem;color:#5c4631;">${c.label}</td>
+          <td style="padding:5px 8px;font-size:0.82rem;color:#5c4631;">${esc(c.label)}</td>
           <td style="text-align:right;padding:5px 8px;font-size:0.82rem;font-weight:700;color:#c0665a;">${c.remaining} left ⚠</td>
         </tr>`).join("");
 
@@ -621,6 +615,13 @@ async function printReceipt() {
 
   document.body.appendChild(el);
 
+  // Keep amounts on one line; if anything is too wide, make the receipt wider
+  el.querySelectorAll("td:not(:first-child), th:not(:first-child)").forEach(c => { c.style.whiteSpace = "nowrap"; });
+  let _w = 480;
+  while (_w < 900 && [...el.querySelectorAll("table.rcpt-fit")].some(t => t.offsetWidth > t.parentElement.clientWidth - 64 + 1)) {
+    _w += 40; el.style.width = _w + "px";
+  }
+
   html2canvas(el, { backgroundColor: "#fffaf5", scale: 2, useCORS: true, logging: false })
     .then(canvas => {
       document.body.removeChild(el);
@@ -630,9 +631,34 @@ async function printReceipt() {
       link.click();
     }).catch(() => {
       if (document.body.contains(el)) document.body.removeChild(el);
-      BrewsDialog.alert("Could not save image. Try again.");
+      alert("Could not save image. Try again.");
     });
 }
+
+// ── Fit helper ────────────────────────────────────────────────────────────────
+// Wraps each table in #results and shrinks its text until it fits the width,
+// so long peso amounts are never cut off. Falls back to sideways scroll.
+function fitResultTables() {
+  const res = document.getElementById("results");
+  if (!res) return;
+  res.querySelectorAll("table").forEach(t => {
+    let wrap = t.parentElement;
+    if (!wrap.classList.contains("tbl-fit")) {
+      wrap = document.createElement("div");
+      wrap.className = "tbl-fit";
+      t.parentNode.insertBefore(wrap, t);
+      wrap.appendChild(t);
+    }
+    const base = parseFloat(getComputedStyle(t).fontSize) || 14;
+    let size = base;
+    t.style.setProperty("--fit", base + "px");
+    while (t.offsetWidth > wrap.clientWidth + 1 && size > 8) {
+      size -= 0.5;
+      t.style.setProperty("--fit", size + "px");
+    }
+  });
+}
+window.addEventListener("resize", () => { if (typeof fitResultTables === "function") fitResultTables(); });
 
 // ── Render helper ─────────────────────────────────────────────────────────────
 
@@ -651,6 +677,7 @@ function renderResults(contentHTML) {
       </label>
     </div>`;
   delete res.dataset.view;
+  fitResultTables();
   // Refresh auto-detected needs preview
   renderNeedsAutoPreview();
 }

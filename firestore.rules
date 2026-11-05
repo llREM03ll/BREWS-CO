@@ -1,39 +1,20 @@
-// firestore.rules — BREWS.CO
+// Firestore security rules for BREWS.CO cloud sync.
+// Paste into Firebase console → Firestore Database → Rules → Publish.
 //
-// This repo previously had NO rules file at all, which was the single
-// highest-priority finding in the engineering audit: without rules, anyone
-// who has the app's (necessarily public) Firebase config can read or
-// overwrite the shop's entire dataset directly against Firestore, bypassing
-// the app's UI-level worker/manager distinction completely.
-//
-// These rules require an authenticated request (Anonymous Auth is enough —
-// see docs/FIREBASE_SETUP.md for the one-time console step to enable it).
-// They do NOT yet implement per-employee accounts or a real manager-vs-worker
-// permission split at the database level, because doing that safely requires
-// a server-side identity (a custom claim or a Cloud Function) that this
-// static, no-backend app does not currently have. Until that exists, treat
-// "manager mode" as a client-side UI convenience, not a security boundary —
-// this is a known, documented limitation, not an oversight (see
-// docs/ARCHITECTURE.md, "What these rules do and don't protect").
-//
-// DEPLOY: firebase deploy --only firestore:rules
-// (requires the Firebase CLI and project access — see docs/FIREBASE_SETUP.md)
-
+// The app has no login, so protection comes from an unguessable document name:
+// the "sync key" you set in Settings → Cloud Sync becomes the name of the shop
+// document (shops/<key>). These rules let a device read, write or update a document
+// only if it already knows the exact name, and nobody can list or delete anything.
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
     match /shops/{shopId} {
-      // Any signed-in device (anonymous auth is sufficient) can read/write
-      // the shop document. This closes the "no rules at all" gap and stops
-      // unauthenticated, script-level access to the data — it intentionally
-      // does not yet attempt to distinguish worker vs. manager at this layer.
-      allow read, write: if request.auth != null;
+      allow get: if true;
+      allow create, update: if request.resource.size < 900000;   // Firestore limit is 1 MiB
+      allow list, delete: if false;
     }
-
-    // Everything else is denied by default (Firestore's implicit default
-    // when no other match applies), so adding new top-level collections in
-    // the future requires a deliberate rule, not an accidental open door.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
