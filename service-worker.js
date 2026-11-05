@@ -6,7 +6,7 @@
  *  - Libraries, fonts, images: cache first (they never change for a given version).
  * Bump CACHE_NAME on every release so old copies are cleared.
  */
-const CACHE_NAME = "brews-inventory-v16";
+const CACHE_NAME = "brews-inventory-v17";
 
 const APP_FILES = [
   "./", "./index.html", "./calculate.html", "./pos.html", "./calendar.html", "./settings.html",
